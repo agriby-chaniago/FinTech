@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 
 class AnalyzeRequest extends FormRequest
 {
@@ -21,8 +23,10 @@ class AnalyzeRequest extends FormRequest
      */
     public function rules(): array
     {
+        $userIdRule = Auth::check() ? 'nullable' : 'required';
+
         return [
-            'user_id' => ['required', 'integer', 'min:1'],
+            'user_id' => [$userIdRule, 'integer', 'min:1'],
             'transactions' => ['required', 'array', 'min:1'],
             'transactions.*.amount' => ['required', 'numeric', 'min:0'],
             'transactions.*.category' => ['required', 'string', 'max:255'],
@@ -49,6 +53,18 @@ class AnalyzeRequest extends FormRequest
 
     public function userId(): int
     {
+        $authenticatedUserId = Auth::id();
+
+        if (is_numeric($authenticatedUserId)) {
+            $requestedUserId = $this->input('user_id');
+
+            if (is_numeric($requestedUserId) && (int) $requestedUserId !== (int) $authenticatedUserId) {
+                throw new AuthorizationException('user_id tidak sesuai dengan akun login.');
+            }
+
+            return (int) $authenticatedUserId;
+        }
+
         return (int) $this->validated('user_id');
     }
 

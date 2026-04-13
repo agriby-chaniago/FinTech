@@ -10,6 +10,7 @@ use App\Services\FintrackFeedSyncStateService;
 use App\Services\FinancialAnalysisService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class AnalysisController extends Controller
@@ -52,7 +53,11 @@ class AnalysisController extends Controller
     public function analyzeAutoRun(): JsonResponse
     {
         try {
-            $result = $this->fintrackAutoAnalyzeService->run();
+            $authenticatedUserId = Auth::id();
+
+            $result = $this->fintrackAutoAnalyzeService->run(
+                is_numeric($authenticatedUserId) ? (int) $authenticatedUserId : null
+            );
         } catch (Throwable $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),
@@ -77,7 +82,17 @@ class AnalysisController extends Controller
 
         $userId = $validated['user_id'] ?? null;
 
-        if (is_numeric($userId)) {
+        $authenticatedUserId = Auth::id();
+
+        if (is_numeric($authenticatedUserId)) {
+            if (is_numeric($userId) && (int) $userId !== (int) $authenticatedUserId) {
+                return response()->json([
+                    'message' => 'user_id tidak sesuai dengan akun login.',
+                ], 403);
+            }
+
+            $query->where('user_id', (int) $authenticatedUserId);
+        } elseif (is_numeric($userId)) {
             $query->where('user_id', (int) $userId);
         }
 

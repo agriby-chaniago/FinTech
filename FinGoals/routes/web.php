@@ -20,7 +20,7 @@ Route::middleware('auth')->group(function (): void {
 
 Route::redirect('/', '/planner');
 
-Route::name('web.')->group(function (): void {
+Route::middleware('hybrid.web_auth')->name('web.')->group(function (): void {
     Route::get('/planner', [PlannerPageController::class, 'index'])->name('planner.index');
     Route::post('/planner', [PlannerPageController::class, 'store'])->name('planner.store');
 

@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 
 class AnalyzeAutoRequest extends FormRequest
 {
@@ -31,6 +33,18 @@ class AnalyzeAutoRequest extends FormRequest
 
     public function resolvedUserId(): int
     {
+        $authenticatedUserId = Auth::id();
+
+        if (is_numeric($authenticatedUserId)) {
+            $requestedUserId = $this->input('user_id');
+
+            if (is_numeric($requestedUserId) && (int) $requestedUserId !== (int) $authenticatedUserId) {
+                throw new AuthorizationException('user_id tidak sesuai dengan akun login.');
+            }
+
+            return (int) $authenticatedUserId;
+        }
+
         $userId = $this->validated('user_id');
 
         if (is_numeric($userId)) {
