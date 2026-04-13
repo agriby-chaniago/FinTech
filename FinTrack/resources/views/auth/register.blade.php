@@ -4,6 +4,13 @@
 
         <!-- Title -->
         <h2 class="text-3xl font-extrabold text-byzantine">Buat Akun Baru</h2>
+        @if (Route::has('oidc.redirect'))
+        <a
+            href="{{ route('oidc.redirect') }}"
+            class="inline-flex items-center justify-center rounded-md border border-byzantine px-4 py-2 text-sm font-semibold text-byzantine transition hover:bg-byzantine hover:text-night">
+            {{ __('Lanjutkan dengan SSO Keycloak') }}
+        </a>
+        @endif
 
         <!-- Name -->
         <div>

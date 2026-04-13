@@ -90,7 +90,6 @@ class AnalysisController extends Controller
         }
 
         $resolvedUserId = (int) $report->user_id;
-<<<<<<< HEAD
         $totalIncome = (float) $report->total_income;
         $totalExpense = (float) $report->total_expense;
         $netBalance = round($totalIncome - $totalExpense, 2);
@@ -100,8 +99,6 @@ class AnalysisController extends Controller
         $financialHealth = $netBalance < 0
             ? 'Defisit'
             : ($savingsRate >= 20 ? 'Sehat' : 'Perlu perhatian');
-=======
->>>>>>> 95acdce (Fix nested repo issue)
 
         return response()->json([
             'message' => 'Payload terbaru untuk Service C berhasil diambil.',
@@ -114,7 +111,6 @@ class AnalysisController extends Controller
                     'next_since' => $this->fintrackFeedSyncStateService->getSince($resolvedUserId),
                 ],
                 'metrics' => [
-<<<<<<< HEAD
                     'total_income' => $totalIncome,
                     'total_expense' => $totalExpense,
                     'transaction_count' => (int) $report->transaction_count,
@@ -127,12 +123,6 @@ class AnalysisController extends Controller
                         : ($savingsRate >= 20
                             ? 'Arus kas positif dengan rasio tabungan yang sehat.'
                             : 'Arus kas positif, namun rasio tabungan masih perlu ditingkatkan.'),
-=======
-                    'total_income' => (float) $report->total_income,
-                    'total_expense' => (float) $report->total_expense,
-                    'transaction_count' => (int) $report->transaction_count,
-                    'top_category' => $report->top_category,
->>>>>>> 95acdce (Fix nested repo issue)
                 ],
                 'category_breakdown' => $report->categoryBreakdowns
                     ->map(fn ($item): array => [

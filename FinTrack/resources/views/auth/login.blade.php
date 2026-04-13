@@ -1,6 +1,7 @@
 <x-guest-layout>
     <!-- Session Status -->
     <x-auth-session-status class="mb-4 text-byzantine" :status="session('status')" />
+    <x-input-error :messages="$errors->get('oidc')" class="mb-4 text-xs text-red-400" />
 
     <form method="POST" action="{{ route('login') }}" class="max-w-md w-full mx-auto space-y-6 text-platinum">
         @csrf
@@ -60,4 +61,14 @@
             </x-primary-button>
         </div>
     </form>
+
+    @if (Route::has('oidc.redirect'))
+    <div class="max-w-md w-full mx-auto mt-6 text-center">
+        <a
+            href="{{ route('oidc.redirect') }}"
+            class="inline-flex items-center justify-center rounded-md border border-byzantine px-6 py-2 text-sm font-semibold text-byzantine transition hover:bg-byzantine hover:text-night">
+            {{ __('Masuk dengan SSO Keycloak') }}
+        </a>
+    </div>
+    @endif
 </x-guest-layout>

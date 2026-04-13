@@ -14,13 +14,9 @@ class GroqInsightService
      */
     public function generateInsight(array $analysisData): array
     {
-<<<<<<< HEAD
         $prompt = 'Berdasarkan data keuangan berikut, berikan insight dalam Bahasa Indonesia yang mudah dipahami. '
             .'Format jawaban harus ringkas, tanpa markdown, maksimal 120 kata, dan mencakup: '
             .'1) kondisi utama, 2) risiko utama, 3) 1-2 saran paling penting. Data: '
-=======
-        $prompt = 'Berdasarkan data keuangan berikut, berikan insight singkat dan saran: '
->>>>>>> 95acdce (Fix nested repo issue)
             .json_encode($analysisData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         $apiKey = trim((string) config('services.groq.api_key'));
@@ -69,11 +65,7 @@ class GroqInsightService
             $content = trim((string) data_get($response->json(), 'choices.0.message.content', ''));
 
             return [
-<<<<<<< HEAD
                 'insight' => $content !== '' ? $this->normalizeInsight($content) : $this->fallbackInsight($analysisData),
-=======
-                'insight' => $content !== '' ? $content : $this->fallbackInsight($analysisData),
->>>>>>> 95acdce (Fix nested repo issue)
                 'model' => $model !== '' ? $model : null,
                 'prompt' => $prompt,
             ];
@@ -105,11 +97,8 @@ class GroqInsightService
     private function fallbackInsight(array $analysisData): string
     {
         $totalExpense = (float) ($analysisData['total_expense'] ?? 0);
-<<<<<<< HEAD
         $netBalance = (float) ($analysisData['net_balance'] ?? 0);
         $savingsRate = (float) ($analysisData['savings_rate'] ?? 0);
-=======
->>>>>>> 95acdce (Fix nested repo issue)
         $topCategory = (string) ($analysisData['top_category'] ?? '');
         $categoryBreakdown = (array) ($analysisData['category_breakdown'] ?? []);
 
@@ -117,23 +106,15 @@ class GroqInsightService
             return 'Belum ada pengeluaran tercatat. Fokus pertahankan arus kas positif sambil menyiapkan rencana tabungan bulanan.';
         }
 
-<<<<<<< HEAD
         if ($netBalance < 0) {
             return 'Saat ini pengeluaran lebih besar dari pemasukan. Prioritaskan pengurangan biaya di kategori terbesar dan tetapkan batas belanja mingguan.';
         }
-
-=======
->>>>>>> 95acdce (Fix nested repo issue)
         if ($topCategory !== '' && isset($categoryBreakdown[$topCategory])) {
             $portion = (float) $categoryBreakdown[$topCategory];
 
             return sprintf(
-<<<<<<< HEAD
                 'Arus kas masih positif dengan rasio tabungan %.2f%%. Pengeluaran terbesar ada di kategori %s (%.2f%% dari total pengeluaran). Pertimbangkan limit mingguan agar pengeluaran lebih terkontrol.',
                 $savingsRate,
-=======
-                'Pengeluaran terbesar ada di kategori %s (%.2f%% dari total pengeluaran). Pertimbangkan menetapkan limit mingguan agar pengeluaran lebih terkontrol.',
->>>>>>> 95acdce (Fix nested repo issue)
                 $topCategory,
                 $portion
             );
@@ -141,7 +122,6 @@ class GroqInsightService
 
         return 'Pantau rasio pemasukan dan pengeluaran setiap minggu, lalu tentukan target pengurangan biaya untuk kategori yang paling sering muncul.';
     }
-<<<<<<< HEAD
 
     private function normalizeInsight(string $insight): string
     {
@@ -153,6 +133,4 @@ class GroqInsightService
 
         return $plain;
     }
-=======
->>>>>>> 95acdce (Fix nested repo issue)
 }
