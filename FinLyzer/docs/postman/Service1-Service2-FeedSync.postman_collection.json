@@ -1,0 +1,247 @@
+{
+  "info": {
+    "name": "Service1 -> Service2 Feed Sync",
+    "description": "Template pull transaksi incremental dari Service 1 untuk tim Service 2.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "api_key",
+      "value": "KEY_SERVICE2"
+    },
+    {
+      "key": "user_id",
+      "value": "2"
+    },
+    {
+      "key": "since",
+      "value": ""
+    },
+    {
+      "key": "include_summary",
+      "value": "0"
+    },
+    {
+      "key": "next_since",
+      "value": ""
+    },
+    {
+      "key": "has_more",
+      "value": "false"
+    }
+  ],
+  "item": [
+    {
+      "name": "Initial Sync (No since)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/service2/users/{{user_id}}/transactions-feed",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "service2",
+            "users",
+            "{{user_id}}",
+            "transactions-feed"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "var res = pm.response.json();",
+              "var nextSince = (((res || {}).meta || {}).next_since || '');",
+              "var hasMore = Boolean((((res || {}).meta || {}).has_more || false));",
+              "pm.collectionVariables.set('next_since', nextSince);",
+              "pm.collectionVariables.set('since', nextSince);",
+              "pm.collectionVariables.set('has_more', String(hasMore));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delta Sync (With since)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/service2/users/{{user_id}}/transactions-feed?since={{since}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "service2",
+            "users",
+            "{{user_id}}",
+            "transactions-feed"
+          ],
+          "query": [
+            {
+              "key": "since",
+              "value": "{{since}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var since = pm.collectionVariables.get('since');",
+              "if (!since) {",
+              "  var nextSince = pm.collectionVariables.get('next_since');",
+              "  if (nextSince) { pm.collectionVariables.set('since', nextSince); }",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "var res = pm.response.json();",
+              "var nextSince = (((res || {}).meta || {}).next_since || '');",
+              "var hasMore = Boolean((((res || {}).meta || {}).has_more || false));",
+              "pm.collectionVariables.set('next_since', nextSince);",
+              "pm.collectionVariables.set('since', nextSince);",
+              "pm.collectionVariables.set('has_more', String(hasMore));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delta Sync (Lightweight include_summary=0)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/service2/users/{{user_id}}/transactions-feed?since={{since}}&include_summary={{include_summary}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "service2",
+            "users",
+            "{{user_id}}",
+            "transactions-feed"
+          ],
+          "query": [
+            {
+              "key": "since",
+              "value": "{{since}}"
+            },
+            {
+              "key": "include_summary",
+              "value": "{{include_summary}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "var res = pm.response.json();",
+              "var nextSince = (((res || {}).meta || {}).next_since || '');",
+              "var hasMore = Boolean((((res || {}).meta || {}).has_more || false));",
+              "pm.collectionVariables.set('next_since', nextSince);",
+              "pm.collectionVariables.set('since', nextSince);",
+              "pm.collectionVariables.set('has_more', String(hasMore));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delta Loop (Run until has_more=false)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/service2/users/{{user_id}}/transactions-feed?since={{since}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "service2",
+            "users",
+            "{{user_id}}",
+            "transactions-feed"
+          ],
+          "query": [
+            {
+              "key": "since",
+              "value": "{{since}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "var res = pm.response.json();",
+              "var nextSince = (((res || {}).meta || {}).next_since || '');",
+              "var hasMore = Boolean((((res || {}).meta || {}).has_more || false));",
+              "pm.collectionVariables.set('next_since', nextSince);",
+              "pm.collectionVariables.set('since', nextSince);",
+              "pm.collectionVariables.set('has_more', String(hasMore));",
+              "if (hasMore) {",
+              "  postman.setNextRequest('Delta Loop (Run until has_more=false)');",
+              "} else {",
+              "  postman.setNextRequest(null);",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
