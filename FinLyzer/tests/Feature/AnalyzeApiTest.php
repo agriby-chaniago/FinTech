@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use App\Services\FintrackFeedSyncStateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -264,6 +265,84 @@ class AnalyzeApiTest extends TestCase
             ->assertJsonPath('source.user_id', 2)
             ->assertJsonPath('source.since_source', 'none')
             ->assertJsonPath('analysis.top_category', 'rent');
+    }
+
+    public function test_internal_prefixed_analyze_endpoint_accepts_api_key(): void
+    {
+        config([
+            'services.analyzer.api_key' => 'my-secret-key',
+            'services.groq.api_key' => '',
+        ]);
+
+        $payload = [
+            'user_id' => 21,
+            'transactions' => [
+                ['amount' => 2000000, 'category' => 'salary', 'type' => 'income'],
+                ['amount' => 400000, 'category' => 'food', 'type' => 'expense'],
+            ],
+        ];
+
+        $response = $this
+            ->withHeaders(['x-api-key' => 'my-secret-key'])
+            ->postJson('/api/internal/analyze', $payload);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('transaction_count', 2)
+            ->assertJsonPath('top_category', 'food');
+    }
+
+    public function test_user_latest_endpoint_requires_authenticated_principal(): void
+    {
+        config([
+            'services.analyzer.api_key' => 'my-secret-key',
+            'services.groq.api_key' => '',
+            'keycloak.auth_mode' => 'hybrid',
+        ]);
+
+        $response = $this
+            ->withHeaders(['x-api-key' => 'my-secret-key'])
+            ->getJson('/api/user/analyze/auto/latest?user_id=10');
+
+        $response
+            ->assertUnauthorized()
+            ->assertJson([
+                'message' => 'Unauthorized. Authenticated user required.',
+            ]);
+    }
+
+    public function test_user_latest_endpoint_returns_data_for_authenticated_user(): void
+    {
+        config([
+            'services.analyzer.api_key' => 'my-secret-key',
+            'services.groq.api_key' => '',
+            'services.fintrack_feed.since_cache_prefix' => 'test_since_',
+            'keycloak.auth_mode' => 'hybrid',
+        ]);
+
+        $user = User::factory()->create();
+
+        app(FintrackFeedSyncStateService::class)->saveSince($user->id, 'SYNC_USER_TOKEN');
+
+        $this
+            ->withHeaders(['x-api-key' => 'my-secret-key'])
+            ->postJson('/api/analyze', [
+                'user_id' => $user->id,
+                'transactions' => [
+                    ['amount' => 4500000, 'category' => 'salary', 'type' => 'income'],
+                    ['amount' => 1000000, 'category' => 'rent', 'type' => 'expense'],
+                ],
+            ])
+            ->assertOk();
+
+        $response = $this
+            ->actingAs($user)
+            ->getJson('/api/user/analyze/auto/latest');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.source_sync.user_id', $user->id)
+            ->assertJsonPath('data.source_sync.next_since', 'SYNC_USER_TOKEN');
     }
 
     public function test_latest_for_service_c_returns_latest_payload(): void

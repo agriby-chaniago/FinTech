@@ -42,12 +42,12 @@ return [
     ],
 
     'analyzer' => [
-        'url' => env('ANALYZER_SERVICE_URL', 'http://localhost:8002/api/analyze'),
+        'url' => env('ANALYZER_SERVICE_URL', 'http://localhost:8002/api/internal/analyze'),
         'api_key' => env('ANALYZER_SERVICE_API_KEY', env('INTER_SERVICE_API_KEY')),
     ],
 
     'planner' => [
-        'url' => env('PLANNER_SERVICE_URL', 'http://localhost:8003/api/plan'),
+        'url' => env('PLANNER_SERVICE_URL', 'http://localhost:8003/api/internal/plan'),
         'api_key' => env('PLANNER_SERVICE_API_KEY', env('INTER_SERVICE_API_KEY')),
     ],
 
