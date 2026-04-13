@@ -18,7 +18,11 @@ class FinancialAnalysisService
 
     /**
      * @param array<int, array{amount: mixed, category: mixed, type: mixed}> $transactions
+<<<<<<< HEAD
         * @return array{total_income: float, total_expense: float, transaction_count: int, top_category: ?string, category_breakdown: array<string, float>, net_balance: float, savings_rate: float, financial_health: string, summary: string, insight: string}
+=======
+     * @return array{total_income: float, total_expense: float, transaction_count: int, top_category: ?string, category_breakdown: array<string, float>, insight: string}
+>>>>>>> 95acdce (Fix nested repo issue)
      */
     public function analyze(int $userId, array $transactions): array
     {
@@ -32,10 +36,13 @@ class FinancialAnalysisService
             'transaction_count' => $metrics['transaction_count'],
             'top_category' => $metrics['top_category'],
             'category_breakdown' => $metrics['category_breakdown'],
+<<<<<<< HEAD
             'net_balance' => $metrics['net_balance'],
             'savings_rate' => $metrics['savings_rate'],
             'financial_health' => $metrics['financial_health'],
             'summary' => $metrics['summary'],
+=======
+>>>>>>> 95acdce (Fix nested repo issue)
         ];
 
         return DB::transaction(function () use ($analysisData, $metrics, $normalizedTransactions, $userId): array {
@@ -79,7 +86,11 @@ class FinancialAnalysisService
 
     /**
      * @param Collection<int, array{amount: float, category: string, type: string}> $transactions
+<<<<<<< HEAD
         * @return array{total_income: float, total_expense: float, transaction_count: int, top_category: ?string, category_breakdown: array<string, float>, net_balance: float, savings_rate: float, financial_health: string, summary: string, expense_by_category: array<string, float>}
+=======
+     * @return array{total_income: float, total_expense: float, transaction_count: int, top_category: ?string, category_breakdown: array<string, float>, expense_by_category: array<string, float>}
+>>>>>>> 95acdce (Fix nested repo issue)
      */
     private function calculateMetrics(Collection $transactions): array
     {
@@ -107,6 +118,7 @@ class FinancialAnalysisService
                 : 0.0)
             ->all();
 
+<<<<<<< HEAD
         $netBalance = round($totalIncome - $totalExpense, 2);
         $savingsRate = $totalIncome > 0
             ? round(($netBalance / $totalIncome) * 100, 2)
@@ -115,16 +127,21 @@ class FinancialAnalysisService
         $financialHealth = $this->resolveFinancialHealth($netBalance, $savingsRate);
         $summary = $this->buildSummary($totalIncome, $totalExpense, $netBalance, $savingsRate, $financialHealth);
 
+=======
+>>>>>>> 95acdce (Fix nested repo issue)
         return [
             'total_income' => $totalIncome,
             'total_expense' => $totalExpense,
             'transaction_count' => $transactionCount,
             'top_category' => $topCategory,
             'category_breakdown' => $categoryBreakdown,
+<<<<<<< HEAD
             'net_balance' => $netBalance,
             'savings_rate' => $savingsRate,
             'financial_health' => $financialHealth,
             'summary' => $summary,
+=======
+>>>>>>> 95acdce (Fix nested repo issue)
             'expense_by_category' => $expenseByCategory,
         ];
     }
@@ -164,8 +181,13 @@ class FinancialAnalysisService
     }
 
     /**
+<<<<<<< HEAD
      * @param array{total_income: float, total_expense: float, transaction_count: int, top_category: ?string, category_breakdown: array<string, float>, net_balance: float, savings_rate: float, financial_health: string, summary: string, expense_by_category: array<string, float>} $metrics
      * @return array{total_income: float, total_expense: float, transaction_count: int, top_category: ?string, category_breakdown: array<string, float>, net_balance: float, savings_rate: float, financial_health: string, summary: string, insight: string}
+=======
+     * @param array{total_income: float, total_expense: float, transaction_count: int, top_category: ?string, category_breakdown: array<string, float>, expense_by_category: array<string, float>} $metrics
+     * @return array{total_income: float, total_expense: float, transaction_count: int, top_category: ?string, category_breakdown: array<string, float>, insight: string}
+>>>>>>> 95acdce (Fix nested repo issue)
      */
     private function buildResponse(array $metrics, string $insight): array
     {
@@ -175,14 +197,18 @@ class FinancialAnalysisService
             'transaction_count' => $metrics['transaction_count'],
             'top_category' => $metrics['top_category'],
             'category_breakdown' => $metrics['category_breakdown'],
+<<<<<<< HEAD
             'net_balance' => $metrics['net_balance'],
             'savings_rate' => $metrics['savings_rate'],
             'financial_health' => $metrics['financial_health'],
             'summary' => $metrics['summary'],
+=======
+>>>>>>> 95acdce (Fix nested repo issue)
             'insight' => $insight,
         ];
     }
 
+<<<<<<< HEAD
     private function resolveFinancialHealth(float $netBalance, float $savingsRate): string
     {
         if ($netBalance < 0) {
@@ -224,6 +250,8 @@ class FinancialAnalysisService
         );
     }
 
+=======
+>>>>>>> 95acdce (Fix nested repo issue)
     /**
      * @param Collection<int, array{amount: float, category: string, type: string}> $transactions
      * @return Collection<string, float>

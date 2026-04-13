@@ -197,6 +197,7 @@ Mode ini otomatis:
 3. Mengambil transaksi terbaru dari feed Project A
 4. Menyimpan `next_since` untuk run berikutnya
 
+<<<<<<< HEAD
 ## Penggunaan Dashboard Multi User (UI)
 
 Dashboard sekarang fokus untuk penggunaan otomatis dan multi user.
@@ -219,6 +220,8 @@ Metrik tambahan yang ditampilkan:
 - `financial_health` (status keuangan)
 - `summary` (ringkasan analisis bahasa sederhana)
 
+=======
+>>>>>>> 95acdce (Fix nested repo issue)
 ## Endpoint Pull Hasil Terbaru (Untuk Service C)
 
 Service C dapat mengambil hasil analisis terbaru (per user) dari endpoint ini:
