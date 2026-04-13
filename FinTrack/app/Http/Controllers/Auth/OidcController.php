@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -111,10 +112,27 @@ class OidcController extends Controller
 
         $tokenData = $tokenResponse->json();
         $accessToken = (string) data_get($tokenData, 'access_token', '');
+        $idToken = (string) data_get($tokenData, 'id_token', '');
+
+        $expectedNonce = (string) $request->session()->pull('oidc_nonce', '');
 
         if ($accessToken === '') {
             return redirect()->route('login')->withErrors([
                 'oidc' => 'Access token OIDC tidak tersedia.',
+            ]);
+        }
+
+        if ($idToken === '') {
+            return redirect()->route('login')->withErrors([
+                'oidc' => 'ID token OIDC tidak tersedia.',
+            ]);
+        }
+
+        $idTokenClaims = $this->validateIdToken($idToken, $clientId, $expectedNonce);
+
+        if (! is_array($idTokenClaims)) {
+            return redirect()->route('login')->withErrors([
+                'oidc' => 'Validasi klaim ID token OIDC gagal.',
             ]);
         }
 
@@ -144,6 +162,14 @@ class OidcController extends Controller
         if ($keycloakSub === '') {
             return redirect()->route('login')->withErrors([
                 'oidc' => 'Subject user dari Keycloak tidak tersedia.',
+            ]);
+        }
+
+        $idTokenSub = trim((string) data_get($idTokenClaims, 'sub', ''));
+
+        if ($idTokenSub !== '' && ! hash_equals($idTokenSub, $keycloakSub)) {
+            return redirect()->route('login')->withErrors([
+                'oidc' => 'Subject ID token tidak konsisten dengan userinfo.',
             ]);
         }
 
@@ -198,7 +224,7 @@ class OidcController extends Controller
         $request->session()->put('oidc_tokens', [
             'access_token' => $accessToken,
             'refresh_token' => (string) data_get($tokenData, 'refresh_token', ''),
-            'id_token' => (string) data_get($tokenData, 'id_token', ''),
+            'id_token' => $idToken,
             'expires_in' => (int) data_get($tokenData, 'expires_in', 0),
         ]);
 
@@ -234,5 +260,123 @@ class OidcController extends Controller
         }
 
         return redirect()->away($logoutEndpoint.'?'.http_build_query($query));
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function validateIdToken(string $idToken, string $clientId, string $expectedNonce): ?array
+    {
+        $claims = $this->parseJwtClaims($idToken);
+
+        if (! is_array($claims)) {
+            return null;
+        }
+
+        $issuer = rtrim((string) config('keycloak.issuer', ''), '/');
+        $tokenIssuer = rtrim((string) data_get($claims, 'iss', ''), '/');
+
+        if ($issuer !== '' && $tokenIssuer === '') {
+            return null;
+        }
+
+        if ($issuer !== '' && $tokenIssuer !== '' && ! hash_equals($issuer, $tokenIssuer)) {
+            return null;
+        }
+
+        $audience = data_get($claims, 'aud');
+
+        if (! $this->isAudienceValid($audience, $clientId)) {
+            return null;
+        }
+
+        $exp = data_get($claims, 'exp');
+
+        if (! is_numeric($exp)) {
+            return null;
+        }
+
+        $expiresAt = (int) $exp;
+
+        if ($expiresAt < (time() - 60)) {
+            return null;
+        }
+
+        $nonce = trim((string) data_get($claims, 'nonce', ''));
+
+        if ($expectedNonce === '' || $nonce === '' || ! hash_equals($expectedNonce, $nonce)) {
+            return null;
+        }
+
+        $replayId = trim((string) data_get($claims, 'jti', ''));
+
+        if ($replayId === '') {
+            $replayId = hash('sha256', $idToken);
+        }
+
+        $cacheKey = 'oidc:id_token:seen:'.sha1($replayId);
+        $ttlSeconds = max(60, $expiresAt - time());
+
+        if (! Cache::add($cacheKey, true, now()->addSeconds($ttlSeconds))) {
+            return null;
+        }
+
+        return $claims;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function parseJwtClaims(string $jwt): ?array
+    {
+        $parts = explode('.', $jwt);
+
+        if (count($parts) !== 3) {
+            return null;
+        }
+
+        $decodedPayload = $this->base64UrlDecode($parts[1]);
+
+        if ($decodedPayload === null) {
+            return null;
+        }
+
+        $claims = json_decode($decodedPayload, true);
+
+        return is_array($claims) ? $claims : null;
+    }
+
+    private function isAudienceValid(mixed $audience, string $clientId): bool
+    {
+        if ($clientId === '') {
+            return false;
+        }
+
+        if (is_string($audience)) {
+            return hash_equals($audience, $clientId);
+        }
+
+        if (is_array($audience)) {
+            foreach ($audience as $audienceEntry) {
+                if (is_string($audienceEntry) && hash_equals($audienceEntry, $clientId)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function base64UrlDecode(string $value): ?string
+    {
+        $remainder = strlen($value) % 4;
+
+        if ($remainder > 0) {
+            $value .= str_repeat('=', 4 - $remainder);
+        }
+
+        $decoded = base64_decode(strtr($value, '-_', '+/'), true);
+
+        return is_string($decoded) ? $decoded : null;
     }
 }

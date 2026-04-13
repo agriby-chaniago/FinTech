@@ -2,6 +2,7 @@
 
 $baseUrl = rtrim((string) env('KEYCLOAK_BASE_URL', ''), '/');
 $realm = (string) env('KEYCLOAK_REALM', 'fintech');
+$issuer = rtrim((string) env('KEYCLOAK_ISSUER', $baseUrl !== '' ? $baseUrl.'/realms/'.$realm : ''), '/');
 $realmBase = $baseUrl !== ''
     ? $baseUrl.'/realms/'.$realm.'/protocol/openid-connect'
     : '';
@@ -12,6 +13,7 @@ return [
 
     'base_url' => $baseUrl,
     'realm' => $realm,
+    'issuer' => $issuer,
     'client_id' => (string) env('KEYCLOAK_CLIENT_ID', ''),
     'client_secret' => (string) env('KEYCLOAK_CLIENT_SECRET', ''),
 

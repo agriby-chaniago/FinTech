@@ -17,7 +17,7 @@ class OidcController extends Controller
     public function redirect(Request $request): RedirectResponse
     {
         if (! (bool) config('keycloak.enabled', false)) {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'OIDC belum diaktifkan pada environment ini.',
             ]);
         }
@@ -27,7 +27,7 @@ class OidcController extends Controller
         $redirectUri = (string) config('keycloak.redirect_uri', '');
 
         if ($authorizationEndpoint === '' || $clientId === '' || $redirectUri === '') {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'Konfigurasi Keycloak belum lengkap.',
             ]);
         }
@@ -55,7 +55,7 @@ class OidcController extends Controller
     public function callback(Request $request): RedirectResponse
     {
         if ($request->filled('error')) {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => (string) $request->input('error_description', 'Login OIDC gagal.'),
             ]);
         }
@@ -64,7 +64,7 @@ class OidcController extends Controller
         $expectedState = (string) $request->session()->pull('oidc_state', '');
 
         if ($state === '' || $expectedState === '' || ! hash_equals($expectedState, $state)) {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'State OIDC tidak valid.',
             ]);
         }
@@ -72,7 +72,7 @@ class OidcController extends Controller
         $code = (string) $request->input('code', '');
 
         if ($code === '') {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'Authorization code tidak ditemukan.',
             ]);
         }
@@ -83,7 +83,7 @@ class OidcController extends Controller
         $redirectUri = (string) config('keycloak.redirect_uri', '');
 
         if ($tokenEndpoint === '' || $clientId === '' || $redirectUri === '') {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'Konfigurasi token endpoint Keycloak belum lengkap.',
             ]);
         }
@@ -105,7 +105,7 @@ class OidcController extends Controller
             ->post($tokenEndpoint, $tokenPayload);
 
         if (! $tokenResponse->successful()) {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'Gagal menukar authorization code ke token OIDC.',
             ]);
         }
@@ -117,13 +117,13 @@ class OidcController extends Controller
         $expectedNonce = (string) $request->session()->pull('oidc_nonce', '');
 
         if ($accessToken === '') {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'Access token OIDC tidak tersedia.',
             ]);
         }
 
         if ($idToken === '') {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'ID token OIDC tidak tersedia.',
             ]);
         }
@@ -131,7 +131,7 @@ class OidcController extends Controller
         $idTokenClaims = $this->validateIdToken($idToken, $clientId, $expectedNonce);
 
         if (! is_array($idTokenClaims)) {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'Validasi klaim ID token OIDC gagal.',
             ]);
         }
@@ -139,7 +139,7 @@ class OidcController extends Controller
         $userinfoEndpoint = (string) config('keycloak.endpoints.userinfo', '');
 
         if ($userinfoEndpoint === '') {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'Userinfo endpoint Keycloak belum dikonfigurasi.',
             ]);
         }
@@ -150,7 +150,7 @@ class OidcController extends Controller
             ->get($userinfoEndpoint);
 
         if (! $userinfoResponse->successful()) {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'Gagal mengambil profil user dari Keycloak.',
             ]);
         }
@@ -160,7 +160,7 @@ class OidcController extends Controller
         $keycloakSub = trim((string) data_get($userinfo, 'sub', ''));
 
         if ($keycloakSub === '') {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'Subject user dari Keycloak tidak tersedia.',
             ]);
         }
@@ -168,7 +168,7 @@ class OidcController extends Controller
         $idTokenSub = trim((string) data_get($idTokenClaims, 'sub', ''));
 
         if ($idTokenSub !== '' && ! hash_equals($idTokenSub, $keycloakSub)) {
-            return redirect()->route('web.planner.index')->withErrors([
+            return redirect('/')->withErrors([
                 'oidc' => 'Subject ID token tidak konsisten dengan userinfo.',
             ]);
         }
@@ -228,7 +228,7 @@ class OidcController extends Controller
             'expires_in' => (int) data_get($tokenData, 'expires_in', 0),
         ]);
 
-        return redirect()->intended(route('web.planner.index'));
+        return redirect()->intended('/');
     }
 
     public function logout(Request $request): RedirectResponse
@@ -244,7 +244,7 @@ class OidcController extends Controller
         $request->session()->regenerateToken();
 
         if ($logoutEndpoint === '' || $postLogoutRedirectUri === '') {
-            return redirect()->route('web.planner.index');
+            return redirect('/');
         }
 
         $query = [
