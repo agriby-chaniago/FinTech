@@ -109,6 +109,7 @@ class GroqInsightService
         if ($netBalance < 0) {
             return 'Saat ini pengeluaran lebih besar dari pemasukan. Prioritaskan pengurangan biaya di kategori terbesar dan tetapkan batas belanja mingguan.';
         }
+
         if ($topCategory !== '' && isset($categoryBreakdown[$topCategory])) {
             $portion = (float) $categoryBreakdown[$topCategory];
 

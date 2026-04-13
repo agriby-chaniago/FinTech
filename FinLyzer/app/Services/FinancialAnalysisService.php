@@ -114,6 +114,7 @@ class FinancialAnalysisService
 
         $financialHealth = $this->resolveFinancialHealth($netBalance, $savingsRate);
         $summary = $this->buildSummary($totalIncome, $totalExpense, $netBalance, $savingsRate, $financialHealth);
+
         return [
             'total_income' => $totalIncome,
             'total_expense' => $totalExpense,
@@ -130,7 +131,7 @@ class FinancialAnalysisService
 
     /**
      * @param Collection<int, array{amount: float, category: string, type: string}> $normalizedTransactions
-     * @param array{total_income: float, total_expense: float, transaction_count: int, top_category: ?string, category_breakdown: array<string, float>, net_balance: float, savings_rate: float, financial_health: string, summary: string, expense_by_category: array<string, float>} $metrics
+     * @param array{total_income: float, total_expense: float, transaction_count: int, top_category: ?string, category_breakdown: array<string, float>, expense_by_category: array<string, float>} $metrics
      */
     private function persistAnalysisReport(int $userId, Collection $normalizedTransactions, array $metrics): AnalysisReport
     {
@@ -222,6 +223,7 @@ class FinancialAnalysisService
             $savingsRate
         );
     }
+
     /**
      * @param Collection<int, array{amount: float, category: string, type: string}> $transactions
      * @return Collection<string, float>
