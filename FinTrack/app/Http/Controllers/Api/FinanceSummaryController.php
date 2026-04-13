@@ -72,17 +72,21 @@ class FinanceSummaryController extends Controller
 
         $analysis = $analyzerResponse->json();
 
+        if (! is_array($analysis)) {
+            return response()->json([
+                'message' => 'Analyzer service returned invalid payload.',
+            ], 502);
+        }
+
+        $plannerPayload = $this->buildPlannerPayload($request, (int) $user->id, $analysis);
+
         try {
             $plannerResponse = Http::acceptJson()
                 ->timeout(15)
                 ->withHeaders([
                     'x-api-key' => $plannerApiKey,
                 ])
-                ->post($plannerUrl, [
-                    'user_id' => $user->id,
-                    'transactions' => $transactions,
-                    'analysis' => $analysis,
-                ]);
+                ->post($plannerUrl, $plannerPayload);
         } catch (Throwable $exception) {
             return response()->json([
                 'message' => 'Planner service is unreachable.',
@@ -106,5 +110,29 @@ class FinanceSummaryController extends Controller
                 'plan' => $plannerResponse->json(),
             ],
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $analysis
+     * @return array<string, int|float|string>
+     */
+    private function buildPlannerPayload(Request $request, int $userId, array $analysis): array
+    {
+        $topCategory = trim((string) data_get($analysis, 'top_category', 'others'));
+        $insight = trim((string) data_get($analysis, 'insight', data_get($analysis, 'summary', '')));
+
+        $payload = [
+            'user_id' => $userId,
+            'total_income' => (int) round((float) data_get($analysis, 'total_income', 0)),
+            'total_expense' => (int) round((float) data_get($analysis, 'total_expense', 0)),
+            'top_category' => $topCategory !== '' ? $topCategory : 'others',
+            'insight' => $insight !== '' ? $insight : 'Insight tidak tersedia dari analyzer.',
+        ];
+
+        if ($request->filled('saving_percentage') && is_numeric($request->input('saving_percentage'))) {
+            $payload['saving_percentage'] = (float) $request->input('saving_percentage');
+        }
+
+        return $payload;
     }
 }
