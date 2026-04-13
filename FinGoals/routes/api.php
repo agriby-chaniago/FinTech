@@ -12,6 +12,11 @@ Route::middleware('api.key')->prefix('internal')->group(function (): void {
     Route::post('/plan', [PlanController::class, 'store']);
 });
 
+Route::middleware(['hybrid.api_auth', 'auth.principal'])->prefix('user')->group(function (): void {
+    Route::post('/plan', [PlanController::class, 'store'])->name('api.user.plan.store');
+    Route::apiResource('goals', GoalController::class)->names('api.user.goals');
+});
+
 Route::middleware('hybrid.api_auth')->group(function (): void {
     Route::apiResource('goals', GoalController::class);
 });
