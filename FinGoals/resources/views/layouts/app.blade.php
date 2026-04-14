@@ -9,8 +9,8 @@
 <body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
     <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div class="absolute -left-24 -top-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl"></div>
-        <div class="absolute -right-24 top-24 h-[28rem] w-[28rem] rounded-full bg-indigo-500/20 blur-3xl"></div>
-        <div class="absolute inset-x-0 bottom-0 h-52 bg-gradient-to-t from-slate-950 to-transparent"></div>
+        <div class="absolute -right-24 top-24 h-112 w-md rounded-full bg-indigo-500/20 blur-3xl"></div>
+        <div class="absolute inset-x-0 bottom-0 h-52 bg-linear-to-t from-slate-950 to-transparent"></div>
     </div>
 
     <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">

@@ -713,8 +713,8 @@
 </div>
 
 <script>
-    const autoEndpoint = @json(url('/api/analyze/auto'));
-    const autoRunEndpoint = @json(url('/api/analyze/auto/run'));
+    const autoEndpoint = "{{ url('/api/analyze/auto') }}";
+    const autoRunEndpoint = "{{ url('/api/analyze/auto/run') }}";
 
     const apiKeyInput = document.getElementById('apiKey');
     const userIdsInput = document.getElementById('userIds');
