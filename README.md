@@ -7,6 +7,69 @@ Panduan ini untuk menjalankan seluruh stack lokal:
 - FinGoals (Service C)
 - Keycloak (OIDC)
 
+## Quick Start 5 Menit
+
+Bagian ini untuk kamu yang mau langsung jalan dulu, detail lengkap tetap ada di section bawah.
+
+### Jalankan Harian (Setelah Setup Awal Selesai)
+
+Jalankan di 4 terminal terpisah:
+
+Terminal 1 - Keycloak
+
+```bash
+docker start keycloak-fintech
+```
+
+Terminal 2 - FinTrack (A)
+
+```bash
+cd FinTrack
+php artisan serve --host=127.0.0.1 --port=8001
+```
+
+Terminal 3 - FinLyzer (B)
+
+```bash
+cd FinLyzer
+php artisan serve --host=127.0.0.1 --port=8002
+```
+
+Terminal 4 - FinGoals (C)
+
+```bash
+cd FinGoals
+php artisan serve --host=127.0.0.1 --port=8003
+```
+
+Verifikasi cepat:
+
+```bash
+curl -sf http://127.0.0.1:8080/realms/fintech/.well-known/openid-configuration | head -c 200
+```
+
+### Setup Awal Sekali Saja
+
+Lakukan sekali di root repository:
+
+```bash
+for svc in FinTrack FinLyzer FinGoals; do
+  cd "$svc"
+  cp -n .env.example .env
+  composer install
+  npm install
+  php artisan key:generate
+  php artisan migrate
+  cd ..
+done
+```
+
+Lalu sesuaikan env berikut sebelum run harian:
+
+- Keycloak OIDC vars: `AUTH_MODE=oidc`, `KEYCLOAK_ENABLED=true`, `KEYCLOAK_*`
+- Koneksi DB tiap service
+- Pair API key antar service (lihat section Sinkronkan API Key Antar Service)
+
 ## Ringkasan Port
 
 - Keycloak: http://127.0.0.1:8080
