@@ -36,6 +36,13 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $mode = strtolower(trim((string) config('keycloak.auth_mode', 'legacy')));
+        $keycloakEnabled = (bool) config('keycloak.enabled', false);
+
+        if ($keycloakEnabled && $mode !== 'legacy') {
+            return app(OidcController::class)->logout($request);
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
