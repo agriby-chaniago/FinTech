@@ -233,6 +233,10 @@ class OidcController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
+        if (! Auth::check()) {
+            return redirect('/');
+        }
+
         $logoutEndpoint = (string) config('keycloak.endpoints.logout', '');
         $postLogoutRedirectUri = (string) config('keycloak.post_logout_redirect_uri', '');
         $clientId = (string) config('keycloak.client_id', '');
