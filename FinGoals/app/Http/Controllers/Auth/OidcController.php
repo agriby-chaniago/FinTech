@@ -34,9 +34,12 @@ class OidcController extends Controller
 
         $state = Str::random(40);
         $nonce = Str::random(40);
+        $pkceVerifier = $this->generatePkceVerifier();
+        $pkceChallenge = $this->base64UrlEncode(hash('sha256', $pkceVerifier, true));
 
         $request->session()->put('oidc_state', $state);
         $request->session()->put('oidc_nonce', $nonce);
+        $request->session()->put('oidc_pkce_verifier', $pkceVerifier);
 
         $scopes = (array) config('keycloak.scopes', ['openid', 'profile', 'email']);
 
@@ -47,6 +50,8 @@ class OidcController extends Controller
             'scope' => implode(' ', $scopes),
             'state' => $state,
             'nonce' => $nonce,
+            'code_challenge' => $pkceChallenge,
+            'code_challenge_method' => 'S256',
         ]);
 
         return redirect()->away($authorizationEndpoint.'?'.$query);
@@ -94,6 +99,12 @@ class OidcController extends Controller
             'code' => $code,
             'redirect_uri' => $redirectUri,
         ];
+
+        $pkceVerifier = (string) $request->session()->pull('oidc_pkce_verifier', '');
+
+        if ($pkceVerifier !== '') {
+            $tokenPayload['code_verifier'] = $pkceVerifier;
+        }
 
         if ($clientSecret !== '') {
             $tokenPayload['client_secret'] = $clientSecret;
@@ -378,5 +389,15 @@ class OidcController extends Controller
         $decoded = base64_decode(strtr($value, '-_', '+/'), true);
 
         return is_string($decoded) ? $decoded : null;
+    }
+
+    private function base64UrlEncode(string $value): string
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    }
+
+    private function generatePkceVerifier(): string
+    {
+        return $this->base64UrlEncode(random_bytes(64));
     }
 }
