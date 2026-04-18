@@ -268,6 +268,11 @@ KEYCLOAK_CLIENT_ID=fingoals-web
 KEYCLOAK_CLIENT_SECRET=your_fingoals_client_secret
 KEYCLOAK_REDIRECT_URI=http://127.0.0.1:8003/auth/oidc/callback
 KEYCLOAK_POST_LOGOUT_REDIRECT_URI=http://127.0.0.1:8003
+
+SERVICE1_CALLBACK_ENABLED=true
+SERVICE1_CALLBACK_URL=http://127.0.0.1:8001/api/service3/plans/callback
+SERVICE1_CALLBACK_API_KEY=your_service3_callback_api_key
+SERVICE1_CALLBACK_TIMEOUT=10
 ```
 
 Lanjutkan:
@@ -299,7 +304,9 @@ Supaya internal endpoint tidak 401, samakan nilai kunci berikut:
 4. C callback ke A (jika flow callback aktif)
 
 - FinTrack: `SERVICE3_CALLBACK_API_KEY`
-- Request callback C ke A kirim header `x-api-key` dengan nilai yang sama
+- FinGoals: `SERVICE1_CALLBACK_API_KEY`
+- FinGoals: set `SERVICE1_CALLBACK_ENABLED=true` dan `SERVICE1_CALLBACK_URL=http://127.0.0.1:8001/api/service3/plans/callback`
+- Request callback C ke A kirim header `x-api-key` dari nilai `SERVICE1_CALLBACK_API_KEY`
 
 Tips dev:
 

@@ -45,4 +45,11 @@ return [
         'api_key' => env('INVESTMENT_PLANNER_API_KEY'),
     ],
 
+    'service1_callback' => [
+        'enabled' => env('SERVICE1_CALLBACK_ENABLED', false),
+        'url' => env('SERVICE1_CALLBACK_URL', 'http://localhost:8001/api/service3/plans/callback'),
+        'api_key' => env('SERVICE1_CALLBACK_API_KEY'),
+        'timeout' => (int) env('SERVICE1_CALLBACK_TIMEOUT', 10),
+    ],
+
 ];

@@ -17,6 +17,6 @@ Route::middleware(['hybrid.api_auth', 'auth.principal'])->prefix('user')->group(
     Route::apiResource('goals', GoalController::class)->names('api.user.goals');
 });
 
-Route::middleware('hybrid.api_auth')->group(function (): void {
+Route::middleware(['hybrid.api_auth', 'auth.principal'])->group(function (): void {
     Route::apiResource('goals', GoalController::class);
 });

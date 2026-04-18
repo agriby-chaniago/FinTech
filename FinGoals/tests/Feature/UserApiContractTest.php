@@ -11,6 +11,24 @@ class UserApiContractTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_legacy_goals_endpoint_requires_authenticated_principal(): void
+    {
+        config([
+            'services.investment_planner.api_key' => 'planner-secret',
+            'keycloak.auth_mode' => 'hybrid',
+        ]);
+
+        $response = $this
+            ->withHeaders(['x-api-key' => 'planner-secret'])
+            ->getJson('/api/goals');
+
+        $response
+            ->assertUnauthorized()
+            ->assertJson([
+                'message' => 'Unauthorized. Authenticated user required.',
+            ]);
+    }
+
     public function test_user_plan_endpoint_requires_authenticated_principal(): void
     {
         config([

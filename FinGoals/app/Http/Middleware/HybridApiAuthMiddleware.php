@@ -3,17 +3,21 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\OidcUserResolver;
 use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class HybridApiAuthMiddleware
 {
+    public function __construct(
+        private readonly OidcUserResolver $oidcUserResolver
+    ) {
+    }
+
     /**
      * Handle an incoming request.
      */
@@ -90,57 +94,11 @@ class HybridApiAuthMiddleware
         }
 
         $userinfo = $response->json();
-        $keycloakSub = trim((string) data_get($userinfo, 'sub', ''));
 
-        if ($keycloakSub === '') {
+        if (! is_array($userinfo)) {
             return null;
         }
 
-        $email = strtolower(trim((string) data_get($userinfo, 'email', '')));
-
-        if ($email === '') {
-            $email = strtolower($keycloakSub).'@keycloak.local';
-        }
-
-        $name = trim((string) data_get($userinfo, 'name', ''));
-
-        if ($name === '') {
-            $name = trim((string) data_get($userinfo, 'preferred_username', ''));
-        }
-
-        if ($name === '') {
-            $name = Str::before($email, '@');
-        }
-
-        if ($name === '') {
-            $name = 'User';
-        }
-
-        $user = User::query()
-            ->where('keycloak_sub', $keycloakSub)
-            ->first();
-
-        if (! $user instanceof User) {
-            $user = User::query()
-                ->where('email', $email)
-                ->first();
-        }
-
-        if ($user instanceof User) {
-            $user->forceFill([
-                'name' => $name,
-                'email' => $email,
-                'keycloak_sub' => $keycloakSub,
-            ])->save();
-
-            return $user;
-        }
-
-        return User::create([
-            'name' => $name,
-            'email' => $email,
-            'keycloak_sub' => $keycloakSub,
-            'password' => Hash::make(Str::random(40)),
-        ]);
+        return $this->oidcUserResolver->resolveFromUserinfo($userinfo);
     }
 }

@@ -3,17 +3,21 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Services\OidcUserResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 class OidcController extends Controller
 {
+    public function __construct(
+        private readonly OidcUserResolver $oidcUserResolver
+    ) {
+    }
+
     public function redirect(Request $request): RedirectResponse
     {
         if (! (bool) config('keycloak.enabled', false)) {
@@ -184,48 +188,11 @@ class OidcController extends Controller
             ]);
         }
 
-        $email = strtolower(trim((string) data_get($userinfo, 'email', '')));
+        $user = $this->oidcUserResolver->resolveFromUserinfo(is_array($userinfo) ? $userinfo : []);
 
-        if ($email === '') {
-            $email = strtolower($keycloakSub).'@keycloak.local';
-        }
-
-        $name = trim((string) data_get($userinfo, 'name', ''));
-
-        if ($name === '') {
-            $name = trim((string) data_get($userinfo, 'preferred_username', ''));
-        }
-
-        if ($name === '') {
-            $name = Str::before($email, '@');
-        }
-
-        if ($name === '') {
-            $name = 'User';
-        }
-
-        $user = User::query()
-            ->where('keycloak_sub', $keycloakSub)
-            ->first();
-
-        if (! $user instanceof User) {
-            $user = User::query()
-                ->where('email', $email)
-                ->first();
-        }
-
-        if ($user instanceof User) {
-            $user->forceFill([
-                'name' => $name,
-                'email' => $email,
-                'keycloak_sub' => $keycloakSub,
-            ])->save();
-        } else {
-            $user = User::create([
-                'name' => $name,
-                'email' => $email,
-                'keycloak_sub' => $keycloakSub,
-                'password' => Hash::make(Str::random(40)),
+        if ($user === null) {
+            return redirect()->route('web.planner.index')->withErrors([
+                'oidc' => 'Profil Keycloak tidak memiliki identitas email yang bisa dipetakan ke akun lokal.',
             ]);
         }
 
