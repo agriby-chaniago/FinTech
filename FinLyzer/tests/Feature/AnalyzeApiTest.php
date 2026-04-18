@@ -19,8 +19,12 @@ class AnalyzeApiTest extends TestCase
             'services.groq.api_key' => '',
         ]);
 
+        $user = User::factory()->create([
+            'email' => 'analyze-invalid-key@example.com',
+        ]);
+
         $payload = [
-            'user_id' => 1,
+            'email' => $user->email,
             'transactions' => [
                 ['amount' => 50000, 'category' => 'food', 'type' => 'expense'],
             ],
@@ -42,8 +46,12 @@ class AnalyzeApiTest extends TestCase
             'services.groq.api_key' => '',
         ]);
 
+        $user = User::factory()->create([
+            'email' => 'analyze-result@example.com',
+        ]);
+
         $payload = [
-            'user_id' => 1,
+            'email' => $user->email,
             'transactions' => [
                 ['amount' => 3000000, 'category' => 'salary', 'type' => 'income'],
                 ['amount' => 1000000, 'category' => 'food', 'type' => 'expense'],
@@ -75,7 +83,7 @@ class AnalyzeApiTest extends TestCase
         $this->assertSame(33.33, (float) $json['category_breakdown']['transport']);
 
         $this->assertDatabaseHas('analysis_reports', [
-            'user_id' => 1,
+            'user_id' => $user->id,
             'transaction_count' => 3,
             'top_category' => 'food',
         ]);
@@ -91,8 +99,12 @@ class AnalyzeApiTest extends TestCase
             'services.groq.api_key' => '',
         ]);
 
+        $user = User::factory()->create([
+            'email' => 'analyze-service2-key@example.com',
+        ]);
+
         $payload = [
-            'user_id' => 99,
+            'email' => $user->email,
             'transactions' => [
                 ['amount' => 2500000, 'category' => 'salary', 'type' => 'income'],
                 ['amount' => 750000, 'category' => 'rent', 'type' => 'expense'],
@@ -111,6 +123,10 @@ class AnalyzeApiTest extends TestCase
 
     public function test_analyze_auto_fetches_transactions_from_fintrack_feed(): void
     {
+        $user = User::factory()->create([
+            'email' => 'auto-fetch@example.com',
+        ]);
+
         config([
             'services.analyzer.api_key' => 'my-secret-key',
             'services.groq.api_key' => '',
@@ -135,21 +151,23 @@ class AnalyzeApiTest extends TestCase
         $response = $this
             ->withHeaders(['x-api-key' => 'my-secret-key'])
             ->postJson('/api/analyze/auto', [
-                'user_id' => 2,
+                'email' => $user->email,
                 'since' => '2026-04-12T00:00:00Z',
             ]);
 
         $response
             ->assertOk()
-            ->assertJsonPath('source.user_id', 2)
+            ->assertJsonPath('source.user_id', $user->id)
+            ->assertJsonPath('source.user_email', $user->email)
             ->assertJsonPath('source.fetched_transactions', 2)
             ->assertJsonPath('source.next_since', '2026-04-13T10:00:00Z')
             ->assertJsonPath('analysis.total_income', 3000000)
             ->assertJsonPath('analysis.total_expense', 50000)
             ->assertJsonPath('analysis.top_category', 'food');
 
-        Http::assertSent(function ($request) {
+        Http::assertSent(function ($request) use ($user) {
             return $request->hasHeader('x-api-key', 'fintrack1')
+                && str_contains((string) $request->url(), '/users/'.$user->id.'/transactions-feed')
                 && str_contains((string) $request->url(), 'include_summary=0')
                 && str_contains((string) $request->url(), 'since=2026-04-12T00%3A00%3A00Z');
         });
@@ -157,6 +175,10 @@ class AnalyzeApiTest extends TestCase
 
     public function test_analyze_auto_returns_bad_gateway_when_feed_fails(): void
     {
+        $user = User::factory()->create([
+            'email' => 'auto-fail@example.com',
+        ]);
+
         config([
             'services.analyzer.api_key' => 'my-secret-key',
             'services.groq.api_key' => '',
@@ -175,7 +197,7 @@ class AnalyzeApiTest extends TestCase
         $response = $this
             ->withHeaders(['x-api-key' => 'my-secret-key'])
             ->postJson('/api/analyze/auto', [
-                'user_id' => 2,
+                'email' => $user->email,
             ]);
 
         $response
@@ -187,6 +209,10 @@ class AnalyzeApiTest extends TestCase
 
     public function test_analyze_auto_uses_default_user_and_saved_since_token(): void
     {
+        $user = User::factory()->create([
+            'email' => 'auto-default@example.com',
+        ]);
+
         config([
             'services.analyzer.api_key' => 'my-secret-key',
             'services.groq.api_key' => '',
@@ -194,12 +220,12 @@ class AnalyzeApiTest extends TestCase
             'services.fintrack_feed.path' => '/api/service2/users/{user_id}/transactions-feed',
             'services.fintrack_feed.api_key' => 'fintrack1',
             'services.fintrack_feed.api_key_header' => 'x-api-key',
-            'services.fintrack_feed.default_user_id' => 2,
+            'services.fintrack_feed.default_user_id' => $user->id,
             'services.fintrack_feed.use_saved_since' => true,
             'services.fintrack_feed.since_cache_prefix' => 'test_since_',
         ]);
 
-        app(FintrackFeedSyncStateService::class)->saveSince(2, 'SYNC_TOKEN_1');
+        app(FintrackFeedSyncStateService::class)->saveSince($user->id, 'SYNC_TOKEN_1');
 
         Http::fake([
             'http://fintrack.local/*' => Http::response([
@@ -219,19 +245,24 @@ class AnalyzeApiTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonPath('source.user_id', 2)
+            ->assertJsonPath('source.user_id', $user->id)
+            ->assertJsonPath('source.user_email', $user->email)
             ->assertJsonPath('source.since_used', 'SYNC_TOKEN_1')
             ->assertJsonPath('source.since_source', 'saved')
             ->assertJsonPath('source.next_since', 'SYNC_TOKEN_2');
 
         $this->assertSame(
             'SYNC_TOKEN_2',
-            app(FintrackFeedSyncStateService::class)->getSince(2)
+            app(FintrackFeedSyncStateService::class)->getSince($user->id)
         );
     }
 
     public function test_analyze_auto_run_works_with_api_key_only(): void
     {
+        $user = User::factory()->create([
+            'email' => 'auto-run@example.com',
+        ]);
+
         config([
             'services.analyzer.api_key' => 'my-secret-key',
             'services.groq.api_key' => '',
@@ -239,7 +270,7 @@ class AnalyzeApiTest extends TestCase
             'services.fintrack_feed.path' => '/api/service2/users/{user_id}/transactions-feed',
             'services.fintrack_feed.api_key' => 'fintrack1',
             'services.fintrack_feed.api_key_header' => 'x-api-key',
-            'services.fintrack_feed.default_user_id' => 2,
+            'services.fintrack_feed.default_user_id' => $user->id,
             'services.fintrack_feed.use_saved_since' => true,
             'services.fintrack_feed.since_cache_prefix' => 'test_since_',
         ]);
@@ -262,7 +293,8 @@ class AnalyzeApiTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonPath('source.user_id', 2)
+            ->assertJsonPath('source.user_id', $user->id)
+            ->assertJsonPath('source.user_email', $user->email)
             ->assertJsonPath('source.since_source', 'none')
             ->assertJsonPath('analysis.top_category', 'rent');
     }
@@ -274,8 +306,12 @@ class AnalyzeApiTest extends TestCase
             'services.groq.api_key' => '',
         ]);
 
+        $user = User::factory()->create([
+            'email' => 'internal-analyze@example.com',
+        ]);
+
         $payload = [
-            'user_id' => 21,
+            'email' => $user->email,
             'transactions' => [
                 ['amount' => 2000000, 'category' => 'salary', 'type' => 'income'],
                 ['amount' => 400000, 'category' => 'food', 'type' => 'expense'],
@@ -327,7 +363,7 @@ class AnalyzeApiTest extends TestCase
         $this
             ->withHeaders(['x-api-key' => 'my-secret-key'])
             ->postJson('/api/analyze', [
-                'user_id' => $user->id,
+                'email' => $user->email,
                 'transactions' => [
                     ['amount' => 4500000, 'category' => 'salary', 'type' => 'income'],
                     ['amount' => 1000000, 'category' => 'rent', 'type' => 'expense'],
@@ -353,12 +389,16 @@ class AnalyzeApiTest extends TestCase
             'services.fintrack_feed.since_cache_prefix' => 'test_since_',
         ]);
 
-        app(FintrackFeedSyncStateService::class)->saveSince(10, 'SYNC_TOKEN_10');
+        $user = User::factory()->create([
+            'email' => 'latest-service-c@example.com',
+        ]);
+
+        app(FintrackFeedSyncStateService::class)->saveSince($user->id, 'SYNC_TOKEN_10');
 
         $this
             ->withHeaders(['x-api-key' => 'my-secret-key'])
             ->postJson('/api/analyze', [
-                'user_id' => 10,
+                'email' => $user->email,
                 'transactions' => [
                     ['amount' => 5000000, 'category' => 'salary', 'type' => 'income'],
                     ['amount' => 900000, 'category' => 'rent', 'type' => 'expense'],
@@ -369,11 +409,11 @@ class AnalyzeApiTest extends TestCase
 
         $response = $this
             ->withHeaders(['x-api-key' => 'my-secret-key'])
-            ->getJson('/api/analyze/auto/latest?user_id=10');
+            ->getJson('/api/analyze/auto/latest?user_id='.$user->id);
 
         $response
             ->assertOk()
-            ->assertJsonPath('data.source_sync.user_id', 10)
+            ->assertJsonPath('data.source_sync.user_id', $user->id)
             ->assertJsonPath('data.source_sync.next_since', 'SYNC_TOKEN_10')
             ->assertJsonPath('data.metrics.total_income', 5000000)
             ->assertJsonPath('data.metrics.total_expense', 1200000)

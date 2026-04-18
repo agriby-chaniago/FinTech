@@ -524,10 +524,10 @@
 <body>
 <div class="container">
     <header class="hero">
-        <span class="chip">AUTO · MULTI USER</span>
+        <span class="chip">AUTO · SINGLE USER</span>
         <h1>Dashboard Analisis Otomatis yang Lebih Ringkas</h1>
         <p>
-            Jalankan analisis untuk banyak user sekaligus. Tampilan disederhanakan agar fokus ke hasil penting:
+            Jalankan analisis otomatis untuk satu user berbasis email. Tampilan disederhanakan agar fokus ke hasil penting:
             source sync, metrik, ringkasan, insight AI, dan payload untuk Service C.
         </p>
     </header>
@@ -535,7 +535,7 @@
     <main class="layout">
         <section class="card controls">
             <h2>Kontrol</h2>
-            <p>Isi data minimal lalu jalankan batch.</p>
+            <p>Isi email user lalu jalankan analisis.</p>
 
             <div class="stack">
                 <div>
@@ -544,8 +544,8 @@
                 </div>
 
                 <div>
-                    <label for="userIds">User IDs (pisahkan koma)</label>
-                    <input id="userIds" type="text" value="2" placeholder="Contoh: 2,3,5">
+                    <label for="userEmail">User Email</label>
+                    <input id="userEmail" type="text" value="" placeholder="Contoh: user@mail.com">
                 </div>
 
                 <div>
@@ -564,14 +564,13 @@
                 </label>
 
                 <ol class="guide">
-                    <li>Isi API key dan user IDs.</li>
-                    <li>Klik Run Batch Multi User.</li>
-                    <li>Pilih user pada tabel hasil untuk lihat detail.</li>
+                    <li>Isi API key dan email user.</li>
+                    <li>Klik Run Analyze by Email.</li>
+                    <li>Lihat hasil analisis user pada panel detail.</li>
                 </ol>
 
                 <div class="actions">
-                    <button id="runBatchBtn" type="button" class="btn btn-primary">Run Batch Multi User</button>
-                    <button id="runDefaultBtn" type="button" class="btn btn-soft">Run Default User</button>
+                    <button id="runAnalyzeBtn" type="button" class="btn btn-primary">Run Analyze by Email</button>
                     <button id="clearBtn" type="button" class="btn btn-soft">Clear</button>
                 </div>
 
@@ -581,7 +580,7 @@
 
         <section class="card">
             <h2>Hasil</h2>
-            <p>Ringkasan batch di atas, detail user terpilih di bawah.</p>
+            <p>Ringkasan hasil user tunggal berbasis email.</p>
 
             <div class="summary">
                 <div class="metric">
@@ -607,7 +606,7 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>User</th>
+                                <th>User Email</th>
                                 <th>Status</th>
                                 <th>Fetched</th>
                                 <th>Top Category</th>
@@ -629,7 +628,7 @@
 
                     <div class="detail-grid">
                         <div class="cell">
-                            <small>User ID</small>
+                            <small>User Email</small>
                             <strong id="dUser">-</strong>
                         </div>
                         <div class="cell">
@@ -702,6 +701,7 @@
                     <div class="title">Payload Service C</div>
                     <div class="payload-actions">
                         <button id="copyPayloadBtn" type="button" class="btn btn-soft">Copy Payload</button>
+                        <button id="sendServiceCBtn" type="button" class="btn btn-primary">Kirim ke Service C</button>
                     </div>
                     <div class="json">
                         <pre id="payloadOutput">Belum ada payload.</pre>
@@ -714,18 +714,18 @@
 
 <script>
     const autoEndpoint = "{{ url('/api/analyze/auto') }}";
-    const autoRunEndpoint = "{{ url('/api/analyze/auto/run') }}";
+    const sendServiceCEndpoint = "{{ url('/api/analyze/send-service-c') }}";
 
     const apiKeyInput = document.getElementById('apiKey');
-    const userIdsInput = document.getElementById('userIds');
+    const userEmailInput = document.getElementById('userEmail');
     const sinceOverrideInput = document.getElementById('sinceOverride');
     const includeSummaryInput = document.getElementById('includeSummary');
     const useSavedSinceInput = document.getElementById('useSavedSince');
 
-    const runBatchBtn = document.getElementById('runBatchBtn');
-    const runDefaultBtn = document.getElementById('runDefaultBtn');
+    const runAnalyzeBtn = document.getElementById('runAnalyzeBtn');
     const clearBtn = document.getElementById('clearBtn');
     const copyPayloadBtn = document.getElementById('copyPayloadBtn');
+    const sendServiceCBtn = document.getElementById('sendServiceCBtn');
 
     const statusEl = document.getElementById('status');
 
@@ -758,7 +758,7 @@
     const payloadOutput = document.getElementById('payloadOutput');
 
     let runResults = [];
-    let selectedUserId = null;
+    let selectedUserEmail = null;
     let selectedPayload = null;
 
     function setStatus(message, type) {
@@ -767,21 +767,24 @@
     }
 
     function setLoading(state) {
-        runBatchBtn.disabled = state;
-        runDefaultBtn.disabled = state;
-        runBatchBtn.textContent = state ? 'Running Batch...' : 'Run Batch Multi User';
-        runDefaultBtn.textContent = state ? 'Running...' : 'Run Default User';
+        runAnalyzeBtn.disabled = state;
+        runAnalyzeBtn.textContent = state ? 'Running...' : 'Run Analyze by Email';
     }
 
-    function parseUserIds(raw) {
-        return Array.from(
-            new Set(
-                String(raw || '')
-                    .split(/[\s,;]+/)
-                    .map((value) => Number(value.trim()))
-                    .filter((value) => Number.isInteger(value) && value > 0)
-            )
-        );
+    function setSendLoading(state) {
+        sendServiceCBtn.disabled = state;
+        sendServiceCBtn.textContent = state ? 'Mengirim...' : 'Kirim ke Service C';
+    }
+
+    function parseUserEmail(raw) {
+        const email = String(raw || '').trim().toLowerCase();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!emailRegex.test(email)) {
+            return '';
+        }
+
+        return email;
     }
 
     function formatMoney(value) {
@@ -859,14 +862,15 @@
 
         userRows.innerHTML = runResults
             .map((item) => {
-                const activeClass = item.userId === selectedUserId ? 'active' : '';
+                const activeClass = item.userEmail === selectedUserEmail ? 'active' : '';
                 const badge = '<span class="badge ' + badgeClass(item.status) + '">' + normalizeStatus(item) + '</span>';
                 const fetched = Number(item.source?.fetched_transactions || 0);
                 const top = item.analysis?.top_category || '-';
+                const userEmail = String(item.userEmail || '-');
 
                 return '' +
-                    '<tr class="' + activeClass + '" data-user-id="' + item.userId + '">' +
-                        '<td data-label="User">' + item.userId + '</td>' +
+                    '<tr class="' + activeClass + '" data-user-email="' + userEmail + '">' +
+                        '<td data-label="User">' + userEmail + '</td>' +
                         '<td data-label="Status">' + badge + '</td>' +
                         '<td data-label="Fetched">' + fetched + '</td>' +
                         '<td data-label="Top Category">' + top + '</td>' +
@@ -874,9 +878,9 @@
             })
             .join('');
 
-        userRows.querySelectorAll('tr[data-user-id]').forEach((row) => {
+        userRows.querySelectorAll('tr[data-user-email]').forEach((row) => {
             row.addEventListener('click', () => {
-                selectedUserId = Number(row.getAttribute('data-user-id'));
+                selectedUserEmail = String(row.getAttribute('data-user-email') || '');
                 renderUserRows();
                 renderDetails();
             });
@@ -909,6 +913,8 @@
     function buildServiceCPayload(item) {
         const source = item.source || {};
         const analysis = item.analysis || null;
+        const sourceUserId = source.user_id != null ? Number(source.user_id) : null;
+        const normalizedSourceUserId = Number.isFinite(sourceUserId) ? sourceUserId : null;
 
         if (!analysis) {
             return {
@@ -916,7 +922,8 @@
                 status: item.status,
                 executed_at: item.executedAt,
                 source_sync: {
-                    user_id: item.userId,
+                    user_id: normalizedSourceUserId,
+                    user_email: item.userEmail || source.user_email || null,
                     fetched_transactions: Number(source.fetched_transactions || 0),
                     since_source: source.since_source || null,
                     next_since: source.next_since || null,
@@ -933,7 +940,8 @@
             status: item.status,
             executed_at: item.executedAt,
             source_sync: {
-                user_id: item.userId,
+                user_id: normalizedSourceUserId,
+                user_email: item.userEmail || source.user_email || null,
                 fetched_transactions: Number(source.fetched_transactions || 0),
                 since_source: source.since_source || null,
                 next_since: source.next_since || null,
@@ -957,7 +965,7 @@
     }
 
     function renderDetails() {
-        const selected = runResults.find((item) => item.userId === selectedUserId) || null;
+        const selected = runResults.find((item) => item.userEmail === selectedUserEmail) || null;
 
         if (!selected) {
             detailBadge.className = 'badge empty';
@@ -992,7 +1000,7 @@
         detailBadge.className = 'badge ' + badgeClass(selected.status);
         detailBadge.textContent = normalizeStatus(selected);
 
-        dUser.textContent = String(selected.userId);
+        dUser.textContent = String(selected.userEmail || '-');
         dStatus.textContent = normalizeStatus(selected);
         dFetched.textContent = String(Number(source.fetched_transactions || 0));
         dSinceSource.textContent = source.since_source ? String(source.since_source) : '-';
@@ -1052,7 +1060,7 @@
 
     function clearDashboard(showStatus = true) {
         runResults = [];
-        selectedUserId = null;
+        selectedUserEmail = null;
         selectedPayload = null;
 
         renderSummary();
@@ -1064,9 +1072,9 @@
         }
     }
 
-    async function requestAutoForUser(apiKey, userId) {
+    async function requestAutoForUser(apiKey, userEmail) {
         const payload = {
-            user_id: userId,
+            email: userEmail,
             include_summary: includeSummaryInput.checked,
             use_saved_since: useSavedSinceInput.checked,
         };
@@ -1095,7 +1103,8 @@
         }
 
         return {
-            userId,
+            userId: Number(data.source?.user_id || 0) || null,
+            userEmail: String(data.source?.user_email || userEmail),
             status: data.analysis ? 'ok' : 'empty',
             executedAt: new Date().toISOString(),
             message: data.message || null,
@@ -1104,7 +1113,7 @@
         };
     }
 
-    async function runBatch() {
+    async function runAnalyze() {
         const apiKey = String(apiKeyInput.value || '').trim();
 
         if (!apiKey) {
@@ -1112,71 +1121,80 @@
             return;
         }
 
-        const userIds = parseUserIds(userIdsInput.value);
+        const userEmail = parseUserEmail(userEmailInput.value);
 
-        if (!userIds.length) {
-            setStatus('Isi minimal satu user ID valid. Contoh: 2,3,5', 'error');
+        if (!userEmail) {
+            setStatus('Isi 1 email user yang valid. Contoh: user@mail.com', 'error');
             return;
         }
 
         setLoading(true);
-        setStatus('Menjalankan batch untuk ' + userIds.length + ' user...', 'info');
-
-        const results = [];
-
-        for (const userId of userIds) {
-            try {
-                const result = await requestAutoForUser(apiKey, userId);
-                results.push(result);
-            } catch (error) {
-                results.push({
-                    userId,
-                    status: 'error',
-                    executedAt: new Date().toISOString(),
-                    message: String(error.message || 'Gagal memproses user.'),
-                    source: null,
-                    analysis: null,
-                });
-            }
-        }
-
-        runResults = results;
-        selectedUserId = results[0]?.userId || null;
-
-        renderSummary();
-        renderUserRows();
-        renderDetails();
-
-        const failedCount = results.filter((item) => item.status === 'error').length;
-
-        if (failedCount > 0) {
-            setStatus('Batch selesai dengan beberapa gagal. Periksa user yang berstatus gagal.', 'error');
-        } else {
-            setStatus('Batch selesai. Semua user berhasil diproses.', 'ok');
-        }
-
-        setLoading(false);
-    }
-
-    async function runDefaultUser() {
-        const apiKey = String(apiKeyInput.value || '').trim();
-
-        if (!apiKey) {
-            setStatus('API key wajib diisi.', 'error');
-            return;
-        }
-
-        setLoading(true);
-        setStatus('Menjalankan default user...', 'info');
+        setStatus('Menjalankan analisis untuk ' + userEmail + '...', 'info');
 
         try {
-            const response = await fetch(autoRunEndpoint, {
+            const result = await requestAutoForUser(apiKey, userEmail);
+
+            runResults = [result];
+            selectedUserEmail = result.userEmail;
+
+            renderSummary();
+            renderUserRows();
+            renderDetails();
+
+            if (result.status === 'empty') {
+                setStatus('Tidak ada transaksi baru untuk email tersebut.', 'info');
+            } else {
+                setStatus('Analisis user berhasil diproses.', 'ok');
+            }
+        } catch (error) {
+            runResults = [{
+                userId: null,
+                userEmail,
+                status: 'error',
+                executedAt: new Date().toISOString(),
+                message: String(error.message || 'Gagal memproses user.'),
+                source: null,
+                analysis: null,
+            }];
+
+            selectedUserEmail = userEmail;
+
+            renderSummary();
+            renderUserRows();
+            renderDetails();
+
+            setStatus(String(error.message || 'Gagal memproses user.'), 'error');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function sendToServiceC() {
+        const apiKey = String(apiKeyInput.value || '').trim();
+
+        if (!apiKey) {
+            setStatus('API key wajib diisi.', 'error');
+            return;
+        }
+
+        if (!selectedPayload) {
+            setStatus('Belum ada payload yang bisa dikirim ke Service C.', 'error');
+            return;
+        }
+
+        setSendLoading(true);
+        setStatus('Mengirim payload ke Service C...', 'info');
+
+        try {
+            const response = await fetch(sendServiceCEndpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'x-api-key': apiKey,
                 },
-                body: JSON.stringify({}),
+                body: JSON.stringify({
+                    payload: selectedPayload,
+                }),
             });
 
             const data = await response.json().catch(() => ({
@@ -1187,28 +1205,17 @@
                 throw new Error(String(data.message || ('Request gagal dengan status ' + response.status)));
             }
 
-            const userId = Number(data.source?.user_id || 0) || 2;
+            const recommendation = String(data.service_c_response?.investment_recommendation || '').trim();
 
-            runResults = [{
-                userId,
-                status: data.analysis ? 'ok' : 'empty',
-                executedAt: new Date().toISOString(),
-                message: data.message || null,
-                source: data.source || null,
-                analysis: data.analysis || null,
-            }];
-
-            selectedUserId = userId;
-
-            renderSummary();
-            renderUserRows();
-            renderDetails();
-
-            setStatus('Default user selesai diproses.', 'ok');
+            if (recommendation !== '') {
+                setStatus('Payload terkirim ke Service C. Rekomendasi: ' + recommendation, 'ok');
+            } else {
+                setStatus('Payload berhasil dikirim ke Service C.', 'ok');
+            }
         } catch (error) {
-            setStatus(String(error.message || 'Gagal menjalankan default user.'), 'error');
+            setStatus(String(error.message || 'Gagal mengirim ke Service C.'), 'error');
         } finally {
-            setLoading(false);
+            setSendLoading(false);
         }
     }
 
@@ -1226,8 +1233,8 @@
         }
     }
 
-    runBatchBtn.addEventListener('click', runBatch);
-    runDefaultBtn.addEventListener('click', runDefaultUser);
+    runAnalyzeBtn.addEventListener('click', runAnalyze);
+    sendServiceCBtn.addEventListener('click', sendToServiceC);
     clearBtn.addEventListener('click', () => clearDashboard(true));
     copyPayloadBtn.addEventListener('click', copyPayload);
 

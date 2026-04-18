@@ -53,7 +53,7 @@ return [
     'fintrack_feed' => [
         'base_url' => env('FINTRACK_FEED_BASE_URL', 'http://127.0.0.1:8000'),
         'path' => env('FINTRACK_FEED_PATH', '/api/service2/users/{user_id}/transactions-feed'),
-        'api_key' => env('FINTRACK_FEED_API_KEY', 'fintrack1'),
+        'api_key' => env('FINTRACK_FEED_API_KEY', 'fintrack'),
         'api_key_header' => env('FINTRACK_FEED_API_KEY_HEADER', 'x-api-key'),
         'timeout' => env('FINTRACK_FEED_TIMEOUT', 20),
         'retry_times' => env('FINTRACK_FEED_RETRY_TIMES', 2),
@@ -63,6 +63,14 @@ return [
         'since_cache_prefix' => env('FINTRACK_FEED_SINCE_CACHE_PREFIX', 'fintrack_feed_since_user_'),
         'auto_schedule_enabled' => env('FINTRACK_FEED_AUTO_SCHEDULE_ENABLED', false),
         'auto_schedule_cron' => env('FINTRACK_FEED_AUTO_SCHEDULE_CRON', '*/5 * * * *'),
+    ],
+
+    'service_c_planner' => [
+        'base_url' => env('SERVICE_C_PLANNER_BASE_URL', 'http://127.0.0.1:8003'),
+        'path' => env('SERVICE_C_PLANNER_PATH', '/api/internal/plan'),
+        'api_key' => env('SERVICE_C_PLANNER_API_KEY', 'change-me'),
+        'api_key_header' => env('SERVICE_C_PLANNER_API_KEY_HEADER', 'x-api-key'),
+        'timeout' => env('SERVICE_C_PLANNER_TIMEOUT', 10),
     ],
 
 ];

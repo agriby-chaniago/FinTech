@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -23,35 +24,74 @@ class AnalyzeAutoRequest extends FormRequest
      */
     public function rules(): array
     {
+        $emailRule = Auth::check() ? 'nullable' : 'required';
+
         return [
-            'user_id' => ['nullable', 'integer', 'min:1'],
+            'email' => [$emailRule, 'string', 'email:rfc', 'max:255'],
             'since' => ['nullable', 'string', 'max:255'],
             'include_summary' => ['nullable', 'boolean'],
             'use_saved_since' => ['nullable', 'boolean'],
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'email wajib diisi.',
+            'email.email' => 'email harus berformat email yang valid.',
+        ];
+    }
+
     public function resolvedUserId(): int
     {
-        $authenticatedUserId = Auth::id();
+        $authenticatedUser = Auth::user();
 
-        if (is_numeric($authenticatedUserId)) {
-            $requestedUserId = $this->input('user_id');
+        if ($authenticatedUser instanceof User) {
+            $requestedEmail = $this->normalizeEmail($this->input('email'));
+            $authenticatedEmail = $this->normalizeEmail($authenticatedUser->email);
 
-            if (is_numeric($requestedUserId) && (int) $requestedUserId !== (int) $authenticatedUserId) {
-                throw new AuthorizationException('user_id tidak sesuai dengan akun login.');
+            if ($requestedEmail !== '' && $authenticatedEmail !== '' && ! hash_equals($authenticatedEmail, $requestedEmail)) {
+                throw new AuthorizationException('email tidak sesuai dengan akun login.');
             }
 
-            return (int) $authenticatedUserId;
+            return (int) $authenticatedUser->id;
         }
 
-        $userId = $this->validated('user_id');
+        $requestedEmail = $this->normalizeEmail($this->validated('email'));
 
-        if (is_numeric($userId)) {
-            return (int) $userId;
+        if ($requestedEmail === '') {
+            throw new AuthorizationException('email wajib diisi.');
         }
 
-        return (int) config('services.fintrack_feed.default_user_id', 2);
+        $user = $this->resolveUserByEmail($requestedEmail);
+
+        if (! $user instanceof User) {
+            throw new AuthorizationException('email tidak ditemukan pada database user.');
+        }
+
+        return (int) $user->id;
+    }
+
+    public function resolvedEmail(): ?string
+    {
+        $authenticatedUser = Auth::user();
+
+        if ($authenticatedUser instanceof User) {
+            $email = $this->normalizeEmail($authenticatedUser->email);
+
+            return $email !== '' ? $email : null;
+        }
+
+        $requestedEmail = $this->normalizeEmail($this->validated('email'));
+
+        if ($requestedEmail !== '') {
+            return $requestedEmail;
+        }
+
+        return null;
     }
 
     public function since(): ?string
@@ -90,5 +130,17 @@ class AnalyzeAutoRequest extends FormRequest
         }
 
         return in_array($value, [1, '1', 'true', 'yes'], true);
+    }
+
+    private function normalizeEmail(mixed $value): string
+    {
+        return strtolower(trim((string) $value));
+    }
+
+    private function resolveUserByEmail(string $email): ?User
+    {
+        return User::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
     }
 }

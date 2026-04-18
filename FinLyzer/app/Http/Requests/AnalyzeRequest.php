@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -23,10 +24,10 @@ class AnalyzeRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userIdRule = Auth::check() ? 'nullable' : 'required';
+        $emailRule = Auth::check() ? 'nullable' : 'required';
 
         return [
-            'user_id' => [$userIdRule, 'integer', 'min:1'],
+            'email' => [$emailRule, 'string', 'email:rfc', 'max:255'],
             'transactions' => ['required', 'array', 'min:1'],
             'transactions.*.amount' => ['required', 'numeric', 'min:0'],
             'transactions.*.category' => ['required', 'string', 'max:255'],
@@ -40,8 +41,8 @@ class AnalyzeRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'user_id.required' => 'user_id wajib diisi.',
-            'user_id.integer' => 'user_id harus berupa angka bulat.',
+            'email.required' => 'email wajib diisi.',
+            'email.email' => 'email harus berformat email yang valid.',
             'transactions.required' => 'transactions wajib diisi.',
             'transactions.array' => 'transactions harus berupa array.',
             'transactions.min' => 'Minimal harus ada 1 transaksi.',
@@ -53,19 +54,44 @@ class AnalyzeRequest extends FormRequest
 
     public function userId(): int
     {
-        $authenticatedUserId = Auth::id();
+        $authenticatedUser = Auth::user();
 
-        if (is_numeric($authenticatedUserId)) {
-            $requestedUserId = $this->input('user_id');
+        if ($authenticatedUser instanceof User) {
+            $requestedEmail = $this->normalizeEmail($this->input('email'));
+            $authenticatedEmail = $this->normalizeEmail($authenticatedUser->email);
 
-            if (is_numeric($requestedUserId) && (int) $requestedUserId !== (int) $authenticatedUserId) {
-                throw new AuthorizationException('user_id tidak sesuai dengan akun login.');
+            if ($requestedEmail !== '' && $authenticatedEmail !== '' && ! hash_equals($authenticatedEmail, $requestedEmail)) {
+                throw new AuthorizationException('email tidak sesuai dengan akun login.');
             }
 
-            return (int) $authenticatedUserId;
+            return (int) $authenticatedUser->id;
         }
 
-        return (int) $this->validated('user_id');
+        $email = $this->normalizeEmail($this->validated('email'));
+
+        if ($email === '') {
+            throw new AuthorizationException('email wajib diisi.');
+        }
+
+        $user = $this->resolveUserByEmail($email);
+
+        if (! $user instanceof User) {
+            throw new AuthorizationException('email tidak ditemukan pada database user.');
+        }
+
+        return (int) $user->id;
+    }
+
+    private function normalizeEmail(mixed $value): string
+    {
+        return strtolower(trim((string) $value));
+    }
+
+    private function resolveUserByEmail(string $email): ?User
+    {
+        return User::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
     }
 
     /**

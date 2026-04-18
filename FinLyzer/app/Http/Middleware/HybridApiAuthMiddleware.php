@@ -136,12 +136,12 @@ class HybridApiAuthMiddleware
         }
 
         $user = User::query()
-            ->where('keycloak_sub', $keycloakSub)
+            ->where('email', $email)
             ->first();
 
         if (! $user instanceof User) {
             $user = User::query()
-                ->where('email', $email)
+                ->where('keycloak_sub', $keycloakSub)
                 ->first();
         }
 
