@@ -7,6 +7,12 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
+    @php
+        $authMode = strtolower(trim((string) config('keycloak.auth_mode', 'legacy')));
+        $oidcEnabled = (bool) config('keycloak.enabled', false);
+        $authenticatedUser = auth()->user();
+    @endphp
+
     <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div class="absolute -left-24 -top-32 h-96 w-96 rounded-full bg-cyan-500/20 blur-3xl"></div>
         <div class="absolute -right-24 top-24 h-112 w-md rounded-full bg-indigo-500/20 blur-3xl"></div>
@@ -35,8 +41,38 @@
                         Goals
                     </a>
                 </nav>
+
+                <div class="flex items-center gap-2">
+                    @if ($authenticatedUser)
+                        <span class="rounded-lg border border-emerald-300/30 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-100">
+                            Login: {{ $authenticatedUser->name }}
+                        </span>
+                        <form action="{{ route('oidc.logout') }}" method="POST">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="rounded-lg border border-rose-300/40 px-4 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-300/10"
+                            >
+                                Logout
+                            </button>
+                        </form>
+                    @elseif ($authMode !== 'legacy')
+                        <a
+                            href="{{ route('login') }}"
+                            class="rounded-lg border border-cyan-300/40 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/20"
+                        >
+                            Login
+                        </a>
+                    @endif
+                </div>
             </div>
         </header>
+
+        @if ($authMode !== 'legacy' && ! $oidcEnabled)
+            <div class="mb-6 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                OIDC mode aktif, tetapi KEYCLOAK_ENABLED masih false. Aktifkan KEYCLOAK_ENABLED=true di environment FinGoals.
+            </div>
+        @endif
 
         @if (session('status'))
             <div class="mb-6 rounded-xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">

@@ -24,6 +24,6 @@ class HybridWebAuthMiddleware
             return $next($request);
         }
 
-        return redirect()->route('oidc.redirect');
+        return redirect()->guest(route('login'));
     }
 }
