@@ -77,10 +77,10 @@ Catatan penting:
 
 ## Ringkasan Port
 
-- Keycloak: http://127.0.0.1:8080
-- FinTrack (A): http://127.0.0.1:8001
-- FinLyzer (B): http://127.0.0.1:8002
-- FinGoals (C): http://127.0.0.1:8003
+- Keycloak: <http://127.0.0.1:8080>
+- FinTrack (A): <http://127.0.0.1:8001>
+- FinLyzer (B): <http://127.0.0.1:8002>
+- FinGoals (C): <http://127.0.0.1:8003>
 
 ## Prasyarat
 
@@ -117,7 +117,7 @@ Verifikasi OIDC discovery endpoint:
 curl -sf http://127.0.0.1:8080/realms/fintech/.well-known/openid-configuration | head -c 200
 ```
 
-Buka admin console: http://127.0.0.1:8080/admin
+Buka admin console: <http://127.0.0.1:8080/admin>
 
 ## 2) Setup Realm dan Client di Keycloak
 
@@ -130,12 +130,12 @@ Buat client berikut:
 - Redirect URI: `http://127.0.0.1:8001/auth/oidc/callback`
 - Post logout URI: `http://127.0.0.1:8001`
 
-2. `finlyzer-web`
+1. `finlyzer-web`
 
 - Redirect URI: `http://127.0.0.1:8002/auth/oidc/callback`
 - Post logout URI: `http://127.0.0.1:8002`
 
-3. `fingoals-web`
+1. `fingoals-web`
 
 - Redirect URI: `http://127.0.0.1:8003/auth/oidc/callback`
 - Post logout URI: `http://127.0.0.1:8003`
@@ -296,17 +296,17 @@ Supaya internal endpoint tidak 401, samakan nilai kunci berikut:
 - FinTrack: `ANALYZER_SERVICE_API_KEY`
 - FinLyzer: `ANALYZER_API_KEY`
 
-2. B pull feed dari A
+1. B pull feed dari A
 
 - FinTrack: `SERVICE2_PULL_API_KEY`
 - FinLyzer: `FINTRACK_FEED_API_KEY`
 
-3. A memanggil C (internal plan)
+1. A memanggil C (internal plan)
 
 - FinTrack: `PLANNER_SERVICE_API_KEY`
 - FinGoals: `INVESTMENT_PLANNER_API_KEY`
 
-4. C callback ke A (jika flow callback aktif)
+1. C callback ke A (jika flow callback aktif)
 
 - FinTrack: `SERVICE3_CALLBACK_API_KEY`
 - FinGoals: `SERVICE1_CALLBACK_API_KEY`
@@ -335,23 +335,23 @@ npm run build
 
 1. Cek aplikasi terbuka:
 
-- http://127.0.0.1:8001
-- http://127.0.0.1:8002
-- http://127.0.0.1:8003
+- <http://127.0.0.1:8001>
+- <http://127.0.0.1:8002>
+- <http://127.0.0.1:8003>
 
-2. Cek discovery Keycloak:
+1. Cek discovery Keycloak:
 
 ```bash
 curl -sf http://127.0.0.1:8080/realms/fintech/.well-known/openid-configuration | jq '.issuer'
 ```
 
-3. Cek OIDC redirect endpoint:
+1. Cek OIDC redirect endpoint:
 
-- http://127.0.0.1:8001/auth/oidc/redirect
-- http://127.0.0.1:8002/auth/oidc/redirect
-- http://127.0.0.1:8003/auth/oidc/redirect
+- <http://127.0.0.1:8001/auth/oidc/redirect>
+- <http://127.0.0.1:8002/auth/oidc/redirect>
+- <http://127.0.0.1:8003/auth/oidc/redirect>
 
-4. Jalankan test OIDC callback (opsional):
+1. Jalankan test OIDC callback (opsional):
 
 ```bash
 cd FinTrack && php artisan test --filter OidcCallbackValidationTest
