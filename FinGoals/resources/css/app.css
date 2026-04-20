@@ -8,18 +8,31 @@
 
 @theme {
     --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-    --color-byzantine: #3B59DD;
-    --color-byzantine-hover: #324ECC;
-    --color-platinum: #DDDDE5;
-    --color-night: #15151B;
-    --color-raisin: #181824;
-    --color-raisin2: #23232E;
+    --color-ctp-rosewater: #f5e0dc;
+    --color-ctp-pink: #f5c2e7;
+    --color-ctp-mauve: #cba6f7;
+    --color-ctp-red: #f38ba8;
+    --color-ctp-peach: #fab387;
+    --color-ctp-yellow: #f9e2af;
+    --color-ctp-green: #a6e3a1;
+    --color-ctp-teal: #94e2d5;
+    --color-ctp-blue: #89b4fa;
+    --color-ctp-lavender: #b4befe;
+    --color-ctp-text: #cdd6f4;
+    --color-ctp-subtext1: #bac2de;
+    --color-ctp-subtext0: #a6adc8;
+    --color-ctp-surface2: #585b70;
+    --color-ctp-surface1: #45475a;
+    --color-ctp-surface0: #313244;
+    --color-ctp-base: #1e1e2e;
+    --color-ctp-mantle: #181825;
+    --color-ctp-crust: #11111b;
 }
 
 body {
-    background-color: var(--color-night);
-    background-image: radial-gradient(circle at 14% 18%, rgba(59, 89, 221, 0.22) 0%, transparent 42%),
-        radial-gradient(circle at 84% 0%, rgba(99, 123, 255, 0.16) 0%, transparent 40%);
+    background-color: var(--color-ctp-crust);
+    background-image: radial-gradient(circle at 14% 18%, rgba(203, 166, 247, 0.18) 0%, transparent 42%),
+        radial-gradient(circle at 84% 0%, rgba(137, 180, 250, 0.14) 0%, transparent 40%);
 }
 
 .font-display {
