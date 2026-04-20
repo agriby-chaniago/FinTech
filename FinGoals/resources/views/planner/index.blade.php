@@ -3,66 +3,79 @@
 @section('title', 'Planner - Investment Planner Service')
 
 @section('content')
-    <section class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <article class="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-            <h2 class="font-display text-xl font-semibold text-white">Buat Rencana Keuangan</h2>
-            <p class="mt-1 text-sm text-slate-300">Masukkan data pemasukan dan pengeluaran untuk menghasilkan saran investasi.</p>
+    @php
+        $executedAtLabel = null;
 
-            @if ($users->isEmpty())
-                <div class="mt-5 rounded-xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
-                    Belum ada user pada tabel users. Tambahkan minimal 1 user terlebih dahulu agar planner bisa digunakan.
+        if (! empty($analysisSnapshot['executed_at'])) {
+            try {
+                $executedAtLabel = \Illuminate\Support\Carbon::parse($analysisSnapshot['executed_at'])->format('d M Y H:i');
+            } catch (\Throwable $exception) {
+                $executedAtLabel = (string) $analysisSnapshot['executed_at'];
+            }
+        }
+    @endphp
+
+    <section class="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <article class="rounded-2xl border border-white/10 bg-[#23232E]/85 p-6 shadow-xl">
+            <h2 class="font-display text-2xl font-semibold text-white">Rencana Otomatis Anda</h2>
+            <p class="mt-2 text-sm text-[#DDDDE5]/80">
+                Data pemasukan dan pengeluaran diambil otomatis dari Service B. Anda cukup klik sekali untuk membuat plan.
+            </p>
+
+            @if ($analysisSnapshot)
+                <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-xl border border-white/10 bg-[#15151B]/70 p-4">
+                        <p class="text-xs uppercase tracking-wide text-[#DDDDE5]/60">Total Income</p>
+                        <p class="mt-1 text-lg font-semibold text-white">Rp {{ number_format($analysisSnapshot['total_income'], 0, ',', '.') }}</p>
+                    </div>
+                    <div class="rounded-xl border border-white/10 bg-[#15151B]/70 p-4">
+                        <p class="text-xs uppercase tracking-wide text-[#DDDDE5]/60">Total Expense</p>
+                        <p class="mt-1 text-lg font-semibold text-white">Rp {{ number_format($analysisSnapshot['total_expense'], 0, ',', '.') }}</p>
+                    </div>
+                    <div class="rounded-xl border border-white/10 bg-[#15151B]/70 p-4">
+                        <p class="text-xs uppercase tracking-wide text-[#DDDDE5]/60">Net Balance</p>
+                        <p class="mt-1 text-lg font-semibold text-white">Rp {{ number_format($analysisSnapshot['net_balance'], 0, ',', '.') }}</p>
+                    </div>
+                    <div class="rounded-xl border border-white/10 bg-[#15151B]/70 p-4">
+                        <p class="text-xs uppercase tracking-wide text-[#DDDDE5]/60">Savings Rate</p>
+                        <p class="mt-1 text-lg font-semibold text-white">{{ number_format((float) $analysisSnapshot['savings_rate'], 2, ',', '.') }}%</p>
+                    </div>
                 </div>
-            @else
-                <form action="{{ route('web.planner.store') }}" method="POST" class="mt-5 space-y-4">
+
+                <div class="mt-4 rounded-xl border border-[#3B59DD]/40 bg-[#3B59DD]/15 p-4">
+                    <p class="text-xs uppercase tracking-wide text-[#B9C5FF]">Insight Otomatis</p>
+                    <p class="mt-2 text-sm text-[#E4E8FF]">{{ $analysisSnapshot['summary'] }}</p>
+                    <div class="mt-3 flex flex-wrap gap-2 text-xs text-[#D2D8FF]/80">
+                        <span class="rounded-full border border-[#637BFF]/30 px-2 py-1">Top Category: {{ $analysisSnapshot['top_category'] }}</span>
+                        <span class="rounded-full border border-[#637BFF]/30 px-2 py-1">Kondisi: {{ $analysisSnapshot['financial_health'] }}</span>
+                        <span class="rounded-full border border-[#637BFF]/30 px-2 py-1">{{ $analysisSnapshot['transaction_count'] }} transaksi</span>
+                    </div>
+                </div>
+
+                <form action="{{ route('web.planner.store') }}" method="POST" class="mt-5">
                     @csrf
-
-                    <div>
-                        <label class="mb-1 block text-sm text-slate-200" for="user_id">User</label>
-                        <select id="user_id" name="user_id" class="w-full rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none">
-                            @foreach ($users as $user)
-                                <option value="{{ $user->id }}" @selected((int) old('user_id', $selectedUserId) === $user->id)>
-                                    #{{ $user->id }} - {{ $user->name }} ({{ $user->email }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <label class="mb-1 block text-sm text-slate-200" for="total_income">Total Income</label>
-                            <input id="total_income" name="total_income" type="number" min="0" value="{{ old('total_income', 3000000) }}" class="w-full rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-sm text-slate-200" for="total_expense">Total Expense</label>
-                            <input id="total_expense" name="total_expense" type="number" min="0" value="{{ old('total_expense', 2000000) }}" class="w-full rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none">
-                        </div>
-                    </div>
-
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <label class="mb-1 block text-sm text-slate-200" for="top_category">Top Category</label>
-                            <input id="top_category" name="top_category" type="text" maxlength="255" value="{{ old('top_category', 'food') }}" class="w-full rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-sm text-slate-200" for="saving_percentage">Saving Percentage (%)</label>
-                            <input id="saving_percentage" name="saving_percentage" type="number" min="1" max="100" step="0.01" value="{{ old('saving_percentage', 20) }}" class="w-full rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="mb-1 block text-sm text-slate-200" for="insight">Insight</label>
-                        <textarea id="insight" name="insight" rows="3" class="w-full rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none">{{ old('insight', 'pengeluaran terlalu tinggi') }}</textarea>
-                    </div>
-
-                    <button type="submit" class="inline-flex items-center rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200">
-                        Generate Plan
+                    <button type="submit" class="inline-flex items-center rounded-lg bg-[#3B59DD] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#324ECC]">
+                        Generate Plan Otomatis
                     </button>
                 </form>
+
+                @if ($executedAtLabel)
+                    <p class="mt-3 text-xs text-[#DDDDE5]/60">Data terakhir diperbarui: {{ $executedAtLabel }}</p>
+                @endif
+            @else
+                <div class="mt-5 rounded-xl border border-amber-300/30 bg-amber-400/10 p-4 text-sm text-amber-100">
+                    {{ $analysisMessage ?? 'Data analisis terbaru belum tersedia di Service B.' }}
+                    <div class="mt-3">
+                        <a href="{{ route('web.planner.index') }}" class="inline-flex items-center rounded-lg border border-amber-200/40 px-3 py-1.5 text-xs font-semibold text-amber-50 hover:bg-amber-300/10">
+                            Muat Ulang Data
+                        </a>
+                    </div>
+                </div>
             @endif
         </article>
 
-        <article class="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-            <h2 class="font-display text-xl font-semibold text-white">Hasil Terbaru</h2>
+        <article class="rounded-2xl border border-white/10 bg-[#23232E]/85 p-6 shadow-xl">
+            <h2 class="font-display text-2xl font-semibold text-white">Hasil Plan Terbaru</h2>
 
             @if ($planResult)
                 @php
@@ -71,18 +84,19 @@
                         'medium' => 'border-amber-300/40 bg-amber-400/10 text-amber-100',
                         'high' => 'border-rose-300/40 bg-rose-400/10 text-rose-100',
                     ];
-                    $riskStyle = $riskStyles[$planResult['risk_level']] ?? 'border-slate-300/40 bg-slate-400/10 text-slate-100';
+
+                    $riskStyle = $riskStyles[$planResult['risk_level']] ?? 'border-[#637BFF]/40 bg-[#3B59DD]/20 text-[#D5DEFF]';
                 @endphp
 
                 <div class="mt-4 space-y-4">
-                    <div class="rounded-xl border border-cyan-300/30 bg-cyan-300/10 p-4">
-                        <p class="text-xs uppercase tracking-wide text-cyan-100/90">Saving Plan</p>
-                        <p class="mt-1 text-2xl font-semibold text-white">Rp {{ number_format($planResult['saving_plan'], 0, ',', '.') }}</p>
+                    <div class="rounded-xl border border-[#637BFF]/40 bg-[#3B59DD]/15 p-4">
+                        <p class="text-xs uppercase tracking-wide text-[#CED6FF]">Saving Plan</p>
+                        <p class="mt-1 text-3xl font-semibold text-white">Rp {{ number_format($planResult['saving_plan'], 0, ',', '.') }}</p>
                     </div>
 
-                    <div class="rounded-xl border border-white/10 bg-slate-900/60 p-4">
-                        <p class="text-xs uppercase tracking-wide text-slate-300">Investment Recommendation</p>
-                        <p class="mt-1 text-sm text-slate-100">{{ $planResult['investment_recommendation'] }}</p>
+                    <div class="rounded-xl border border-white/10 bg-[#15151B]/70 p-4">
+                        <p class="text-xs uppercase tracking-wide text-[#DDDDE5]/60">Investment Recommendation</p>
+                        <p class="mt-2 text-sm text-[#F1F2F7]">{{ $planResult['investment_recommendation'] }}</p>
                     </div>
 
                     <div class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide {{ $riskStyle }}">
@@ -90,37 +104,27 @@
                     </div>
                 </div>
             @else
-                <div class="mt-4 rounded-xl border border-white/10 bg-slate-900/60 p-4 text-sm text-slate-300">
-                    Belum ada hasil planning pada sesi ini. Isi form di sebelah kiri lalu klik Generate Plan.
+                <div class="mt-4 rounded-xl border border-white/10 bg-[#15151B]/70 p-4 text-sm text-[#DDDDE5]/75">
+                    Belum ada hasil plan pada sesi ini. Klik <strong>Generate Plan Otomatis</strong> untuk membuat plan dari data terbaru.
                 </div>
             @endif
         </article>
     </section>
 
-    <section class="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+    <section class="mt-6 rounded-2xl border border-white/10 bg-[#23232E]/85 p-5 shadow-xl">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h2 class="font-display text-xl font-semibold text-white">Riwayat Planning</h2>
-                <p class="text-sm text-slate-300">Menampilkan data plan terbaru per user.</p>
+                <h2 class="font-display text-xl font-semibold text-white">Riwayat Planning Anda</h2>
+                <p class="text-sm text-[#DDDDE5]/75">Menampilkan history plan terbaru dari akun yang sedang login.</p>
             </div>
-            <form method="GET" action="{{ route('web.planner.index') }}" class="flex items-center gap-2">
-                <label class="text-sm text-slate-200" for="filter_user_id">User</label>
-                <select id="filter_user_id" name="user_id" class="rounded-lg border border-white/15 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none">
-                    <option value="">Pilih User</option>
-                    @foreach ($users as $user)
-                        <option value="{{ $user->id }}" @selected($selectedUserId === $user->id)>#{{ $user->id }} - {{ $user->name }}</option>
-                    @endforeach
-                </select>
-                <button class="rounded-lg border border-white/20 px-3 py-2 text-sm text-slate-100 hover:bg-white/10" type="submit">Filter</button>
-            </form>
         </div>
 
         @if ($recentPlans->isEmpty())
-            <p class="mt-4 text-sm text-slate-300">Belum ada data planning untuk user yang dipilih.</p>
+            <p class="mt-4 text-sm text-[#DDDDE5]/75">Belum ada riwayat planning untuk akun Anda.</p>
         @else
             <div class="mt-4 overflow-x-auto">
                 <table class="min-w-full divide-y divide-white/10 text-sm">
-                    <thead class="text-left text-slate-300">
+                    <thead class="text-left text-[#DDDDE5]/70">
                         <tr>
                             <th class="px-3 py-2">Tanggal</th>
                             <th class="px-3 py-2">Income</th>
@@ -130,7 +134,7 @@
                             <th class="px-3 py-2">Rekomendasi</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-white/5 text-slate-100">
+                    <tbody class="divide-y divide-white/5 text-[#F4F5FA]">
                         @foreach ($recentPlans as $plan)
                             <tr>
                                 <td class="px-3 py-2">{{ $plan->created_at->format('d M Y H:i') }}</td>

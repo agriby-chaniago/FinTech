@@ -8,11 +8,18 @@
 
 @theme {
     --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    --color-byzantine: #3B59DD;
+    --color-byzantine-hover: #324ECC;
+    --color-platinum: #DDDDE5;
+    --color-night: #15151B;
+    --color-raisin: #181824;
+    --color-raisin2: #23232E;
 }
 
 body {
-    background-image: radial-gradient(circle at 18% 20%, rgba(34, 211, 238, 0.2) 0%, transparent 40%),
-        radial-gradient(circle at 82% 0%, rgba(99, 102, 241, 0.22) 0%, transparent 40%);
+    background-color: var(--color-night);
+    background-image: radial-gradient(circle at 14% 18%, rgba(59, 89, 221, 0.22) 0%, transparent 42%),
+        radial-gradient(circle at 84% 0%, rgba(99, 123, 255, 0.16) 0%, transparent 40%);
 }
 
 .font-display {

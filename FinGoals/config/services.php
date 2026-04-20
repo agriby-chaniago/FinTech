@@ -52,4 +52,10 @@ return [
         'timeout' => (int) env('SERVICE1_CALLBACK_TIMEOUT', 10),
     ],
 
+    'service_b_analyzer' => [
+        'base_url' => env('SERVICE_B_ANALYZER_BASE_URL', 'http://127.0.0.1:8002'),
+        'latest_path' => env('SERVICE_B_ANALYZER_LATEST_PATH', '/api/user/analyze/auto/latest'),
+        'timeout' => (int) env('SERVICE_B_ANALYZER_TIMEOUT', 10),
+    ],
+
 ];

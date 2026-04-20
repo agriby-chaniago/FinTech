@@ -14,16 +14,10 @@ class HybridWebAuthMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $mode = strtolower(trim((string) config('keycloak.auth_mode', 'legacy')));
-
-        if ($mode === 'legacy') {
-            return $next($request);
-        }
-
         if (Auth::check()) {
             return $next($request);
         }
 
-        return redirect()->guest(route('login'));
+        return redirect()->route('oidc.redirect');
     }
 }
