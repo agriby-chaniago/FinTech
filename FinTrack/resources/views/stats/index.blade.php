@@ -17,8 +17,7 @@
         </div>
     </div>
 
-    <!-- ApexCharts CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- ApexCharts Data -->
     <script id="stats-data" type="application/json">
         {!! json_encode([
             'income' => $income,

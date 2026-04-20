@@ -1,4 +1,4 @@
-<nav x-data="{ open: false }" class="bg-raisin/85 backdrop-blur-xl border-b border-raisin3/40 sticky top-0 z-[9999] shadow-[0_4px_20px_-12px_rgba(17,17,27,0.8)]">
+<nav x-data="{ open: false }" class="bg-raisin/85 backdrop-blur-xl border-b border-raisin3/40 sticky top-0 z-[9999]">
     <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-20 items-center">
 

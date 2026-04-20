@@ -109,7 +109,7 @@
                     <!-- Tombol Submit -->
                     <button
                         type="submit"
-                        class="w-full p-3 bg-byzantine hover:bg-byzantine-hover text-night font-semibold rounded-lg shadow transition duration-200 focus:outline-none focus:ring-2 focus:ring-byzantine focus:ring-offset-2 focus:ring-offset-night">
+                        class="w-full p-3 bg-byzantine hover:bg-byzantine-hover text-night font-semibold rounded-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-byzantine focus:ring-offset-2 focus:ring-offset-night">
                         Add Transaction
                     </button>
                 </form>
@@ -604,7 +604,6 @@
     </script>
 
     <!-- ApexCharts Script -->
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const incomeData = readDashboardJson('dashboard-income-series-data', []);

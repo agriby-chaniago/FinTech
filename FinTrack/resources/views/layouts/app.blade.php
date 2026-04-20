@@ -16,7 +16,7 @@
     <div class="flex min-h-screen">
 
         <!-- Sidebar -->
-        <aside class="w-20 bg-gradient-to-b from-raisin2 via-raisin to-night border-r border-raisin3/40 hidden md:flex flex-col items-center py-8 px-4 space-y-8 sticky top-0 h-screen shadow-[4px_0_10px_-4px_rgba(17,17,27,0.7)]">
+        <aside class="w-20 bg-gradient-to-b from-raisin2 via-raisin to-night border-r border-raisin3/40 hidden md:flex flex-col items-center py-8 px-4 space-y-8 sticky top-0 h-screen">
             <!-- Logo Dompet -->
             <div class="flex flex-col items-center space-y-2 mb-2">
                 <svg class="w-11 h-11 text-byzantine" fill="currentColor" viewBox="0 0 20 20"
@@ -89,7 +89,7 @@
 
             <!-- Page Header -->
             @isset($header)
-            <header class="bg-raisin2 shadow">
+            <header class="bg-raisin2">
                 <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-platinum">
                     {{ $header }}
                 </div>

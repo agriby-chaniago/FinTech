@@ -23,7 +23,7 @@
         </div>
 
         <!-- Card -->
-        <div class="w-full max-w-xl bg-raisin2/90 backdrop-blur-sm shadow-lg rounded-2xl px-10 py-8 space-y-6">
+        <div class="w-full max-w-xl bg-raisin2/90 backdrop-blur-sm rounded-2xl px-10 py-8 space-y-6">
             {{ $slot }}
         </div>
     </div>
