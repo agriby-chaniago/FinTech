@@ -1,108 +1,378 @@
 <x-app-layout>
-    <div class="p-6 space-y-10 bg-raisin2 rounded-2xl shadow-md">
+    <div class="fin-surface-card p-6 md:p-8 space-y-6 md:space-y-8">
 
         <!-- Grafik Batang -->
-        <div>
+        <div class="fin-surface-panel p-4 md:p-5">
             <div id="bar-chart"></div>
         </div>
 
         <!-- Grafik Garis (Saldo) -->
-        <div>
+        <div class="fin-surface-panel p-4 md:p-5">
             <div id="line-chart"></div>
         </div>
 
         <!-- Grafik Donut (Komposisi Kategori) -->
-        <div>
+        <div class="fin-surface-panel p-4 md:p-5">
             <div id="donut-chart"></div>
         </div>
     </div>
 
     <!-- ApexCharts CDN -->
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script id="stats-data" type="application/json">
+        {!! json_encode([
+            'income' => $income,
+            'expense' => $expense,
+            'days' => $days,
+            'saldo' => $saldo,
+            'kategoriValues' => $kategoriValues,
+            'kategoriLabels' => $kategoriLabels,
+        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!}
+    </script>
     <script>
+        const statsPayload = (() => {
+            const fallback = {
+                income: [],
+                expense: [],
+                days: [],
+                saldo: [],
+                kategoriValues: [],
+                kategoriLabels: []
+            };
+
+            const payloadElement = document.getElementById('stats-data');
+
+            if (!payloadElement) {
+                return fallback;
+            }
+
+            try {
+                const parsedPayload = JSON.parse(payloadElement.textContent);
+
+                return {
+                    ...fallback,
+                    ...parsedPayload
+                };
+            } catch {
+                return fallback;
+            }
+        })();
+
+        const readThemeColor = (name, fallback) => {
+            const value = getComputedStyle(document.documentElement)
+                .getPropertyValue(name)
+                .trim();
+
+            return value || fallback;
+        };
+
+        const formatCurrency = (value) => {
+            const numericValue = Number(value ?? 0);
+
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                maximumFractionDigits: 0
+            }).format(Number.isFinite(numericValue) ? numericValue : 0);
+        };
+
+        const formatCompactRupiah = (value) => {
+            const numericValue = Number(value ?? 0);
+
+            if (!Number.isFinite(numericValue)) {
+                return 'Rp0';
+            }
+
+            const sign = numericValue < 0 ? '-' : '';
+            const absoluteValue = Math.abs(numericValue);
+
+            if (absoluteValue >= 1_000_000_000) {
+                return `${sign}Rp${(absoluteValue / 1_000_000_000).toFixed(1).replace('.0', '')}M`;
+            }
+
+            if (absoluteValue >= 1_000_000) {
+                return `${sign}Rp${(absoluteValue / 1_000_000).toFixed(1).replace('.0', '')}jt`;
+            }
+
+            if (absoluteValue >= 1_000) {
+                return `${sign}Rp${(absoluteValue / 1_000).toFixed(1).replace('.0', '')}rb`;
+            }
+
+            return `${sign}Rp${absoluteValue.toLocaleString('id-ID')}`;
+        };
+
+        const statsChartTheme = {
+            text: readThemeColor('--ctp-text', '#cdd6f4'),
+            muted: readThemeColor('--ctp-overlay1', '#7f849c'),
+            grid: readThemeColor('--ctp-surface1', '#45475a'),
+            income: readThemeColor('--ctp-blue', '#89b4fa'),
+            expense: readThemeColor('--ctp-red', '#f38ba8'),
+            balance: readThemeColor('--ctp-green', '#a6e3a1'),
+            donut: [
+                readThemeColor('--ctp-yellow', '#f9e2af'),
+                readThemeColor('--ctp-peach', '#fab387'),
+                readThemeColor('--ctp-teal', '#94e2d5'),
+                readThemeColor('--ctp-blue', '#89b4fa'),
+                readThemeColor('--ctp-mauve', '#cba6f7')
+            ]
+        };
+
+        const baseNoData = {
+            text: 'Data belum tersedia',
+            align: 'center',
+            verticalAlign: 'middle',
+            style: {
+                color: statsChartTheme.muted,
+                fontSize: '13px'
+            }
+        };
+
+        const baseGrid = {
+            borderColor: statsChartTheme.grid,
+            strokeDashArray: 4,
+            padding: {
+                left: 8,
+                right: 8
+            }
+        };
+
+        const baseTooltip = {
+            theme: 'dark',
+            y: {
+                formatter: (value) => formatCurrency(value)
+            }
+        };
+
         const barOptions = {
             chart: {
                 type: 'bar',
-                height: 350,
-                foreColor: '#ffffff'
+                height: 340,
+                toolbar: {
+                    show: false
+                },
+                zoom: {
+                    enabled: false
+                },
+                foreColor: statsChartTheme.text
             },
+            noData: baseNoData,
             series: [
                 {
                     name: 'Pemasukan',
-                    data: @json($income)
+                    data: statsPayload.income
                 },
                 {
                     name: 'Pengeluaran',
-                    data: @json($expense)
+                    data: statsPayload.expense
                 }
             ],
-            colors: ['#4A90E2', '#FF5E5E'],
+            colors: [statsChartTheme.income, statsChartTheme.expense],
+            plotOptions: {
+                bar: {
+                    borderRadius: 8,
+                    columnWidth: '44%'
+                }
+            },
             xaxis: {
-                categories: @json($days),
-                labels: { style: { colors: '#ffffff' } }
+                categories: statsPayload.days,
+                labels: {
+                    style: {
+                        colors: statsChartTheme.muted,
+                        fontSize: '12px'
+                    },
+                    rotate: -20,
+                    trim: true
+                }
             },
             yaxis: {
-                labels: { style: { colors: '#ffffff' } }
+                labels: {
+                    style: {
+                        colors: statsChartTheme.muted,
+                        fontSize: '12px'
+                    },
+                    formatter: (value) => formatCompactRupiah(value)
+                }
             },
             title: {
                 text: 'Pemasukan vs Pengeluaran (7 Hari Terakhir)',
-                align: 'center',
-                style: { color: '#ffffff' }
+                align: 'left',
+                style: { color: statsChartTheme.text }
             },
             legend: {
-                labels: { colors: '#ffffff' }
+                position: 'top',
+                horizontalAlign: 'right',
+                labels: { colors: statsChartTheme.text }
             },
-            tooltip: { theme: 'dark' }
+            grid: baseGrid,
+            tooltip: baseTooltip,
+            dataLabels: {
+                enabled: false
+            },
+            responsive: [
+                {
+                    breakpoint: 768,
+                    options: {
+                        chart: {
+                            height: 320
+                        },
+                        legend: {
+                            position: 'bottom',
+                            horizontalAlign: 'center'
+                        }
+                    }
+                }
+            ]
         };
 
         const lineOptions = {
             chart: {
-                type: 'line',
-                height: 350,
-                foreColor: '#ffffff'
+                type: 'area',
+                height: 340,
+                toolbar: {
+                    show: false
+                },
+                zoom: {
+                    enabled: false
+                },
+                foreColor: statsChartTheme.text
             },
+            noData: baseNoData,
             series: [{
                 name: 'Saldo',
-                data: @json($saldo)
+                data: statsPayload.saldo
             }],
-            colors: ['#00E396'],
+            colors: [statsChartTheme.balance],
+            stroke: {
+                curve: 'smooth',
+                width: 3
+            },
+            markers: {
+                size: 4,
+                strokeWidth: 0,
+                hover: {
+                    size: 6
+                }
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.32,
+                    opacityTo: 0.04,
+                    stops: [0, 100]
+                }
+            },
             xaxis: {
-                categories: @json($days),
-                labels: { style: { colors: '#ffffff' } }
+                categories: statsPayload.days,
+                labels: {
+                    style: {
+                        colors: statsChartTheme.muted,
+                        fontSize: '12px'
+                    },
+                    rotate: -20,
+                    trim: true
+                }
             },
             yaxis: {
-                labels: { style: { colors: '#ffffff' } }
+                labels: {
+                    style: {
+                        colors: statsChartTheme.muted,
+                        fontSize: '12px'
+                    },
+                    formatter: (value) => formatCompactRupiah(value)
+                }
             },
             title: {
                 text: 'Saldo Harian',
-                align: 'center',
-                style: { color: '#ffffff' }
+                align: 'left',
+                style: { color: statsChartTheme.text }
             },
-            tooltip: { theme: 'dark' }
+            grid: baseGrid,
+            tooltip: baseTooltip,
+            legend: {
+                show: false
+            }
         };
 
         const donutOptions = {
             chart: {
                 type: 'donut',
-                height: 350,
-                foreColor: '#ffffff'
+                height: 340,
+                toolbar: {
+                    show: false
+                },
+                foreColor: statsChartTheme.text
             },
-            series: @json($kategoriValues),
-            labels: @json($kategoriLabels),
-            colors: ['#FDCB6E', '#E17055', '#00B894', '#0984E3', '#6C5CE7'],
+            noData: baseNoData,
+            series: statsPayload.kategoriValues,
+            labels: statsPayload.kategoriLabels,
+            colors: statsChartTheme.donut,
+            dataLabels: {
+                enabled: false
+            },
+            plotOptions: {
+                pie: {
+                    donut: {
+                        size: '64%',
+                        labels: {
+                            show: true,
+                            value: {
+                                color: statsChartTheme.text,
+                                formatter: (value) => formatCurrency(value)
+                            },
+                            total: {
+                                show: true,
+                                label: 'Total',
+                                color: statsChartTheme.muted,
+                                formatter: (w) => {
+                                    const total = w.globals.seriesTotals.reduce((sum, item) => sum + item, 0);
+
+                                    return formatCurrency(total);
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             title: {
                 text: 'Komposisi Jenis Transaksi',
-                align: 'center',
-                style: { color: '#ffffff' }
+                align: 'left',
+                style: { color: statsChartTheme.text }
             },
             legend: {
-                labels: { colors: '#ffffff' }
+                position: 'bottom',
+                labels: { colors: statsChartTheme.text }
             },
-            tooltip: { theme: 'dark' }
+            tooltip: baseTooltip,
+            responsive: [
+                {
+                    breakpoint: 768,
+                    options: {
+                        chart: {
+                            height: 320
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            ]
         };
 
-        new ApexCharts(document.querySelector("#bar-chart"), barOptions).render();
-        new ApexCharts(document.querySelector("#line-chart"), lineOptions).render();
-        new ApexCharts(document.querySelector("#donut-chart"), donutOptions).render();
+        const barElement = document.querySelector('#bar-chart');
+        const lineElement = document.querySelector('#line-chart');
+        const donutElement = document.querySelector('#donut-chart');
+
+        if (barElement) {
+            new ApexCharts(barElement, barOptions).render();
+        }
+
+        if (lineElement) {
+            new ApexCharts(lineElement, lineOptions).render();
+        }
+
+        if (donutElement) {
+            new ApexCharts(donutElement, donutOptions).render();
+        }
     </script>
 </x-app-layout>

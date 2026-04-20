@@ -1,4 +1,4 @@
-<nav x-data="{ open: false }" class="bg-raisin sticky top-0 z-[9999]" style="box-shadow: 0 4px 4px -2.5px rgba(0, 0, 0, 0.3);">
+<nav x-data="{ open: false }" class="bg-raisin/85 backdrop-blur-xl border-b border-raisin3/40 sticky top-0 z-[9999] shadow-[0_4px_20px_-12px_rgba(17,17,27,0.8)]">
     <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-20 items-center">
 
@@ -14,7 +14,7 @@
                             d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
-                <span class="text-2xl font-bold text-platinum hidden md:block select-none leading-none px-0" style="letter-spacing: -0.05em;">
+                <span class="text-2xl font-bold text-platinum hidden md:block select-none leading-none px-0 tracking-[-0.05em]">
                     {{ config('app.name', 'FinTrack') }}
                 </span>
             </div>
@@ -24,7 +24,7 @@
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button
-                            class="hidden md:flex items-center text-sm text-platinum select-none leading-none rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-byzantine">
+                            class="hidden md:flex items-center text-sm text-platinum select-none leading-none rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-night focus:ring-byzantine">
                             Hello, {{ Auth::user()->name }}
                             <svg class="ml-1 h-4 w-4 text-byzantine" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />

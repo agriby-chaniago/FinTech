@@ -8,10 +8,6 @@
 
     <title>{{ config('app.name', 'Laravel') }}</title>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net" />
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -20,7 +16,7 @@
     <div class="flex min-h-screen">
 
         <!-- Sidebar -->
-        <aside class="w-20 bg-raisin shadow-none border-none hidden md:flex flex-col items-center py-8 px-4 space-y-8 sticky top-0 h-screen" style="box-shadow: 4px 0 10px -4px rgba(0, 0, 0, 0.5);">
+        <aside class="w-20 bg-gradient-to-b from-raisin2 via-raisin to-night border-r border-raisin3/40 hidden md:flex flex-col items-center py-8 px-4 space-y-8 sticky top-0 h-screen shadow-[4px_0_10px_-4px_rgba(17,17,27,0.7)]">
             <!-- Logo Dompet -->
             <div class="flex flex-col items-center space-y-2 mb-2">
                 <svg class="w-11 h-11 text-byzantine" fill="currentColor" viewBox="0 0 20 20"
@@ -35,7 +31,7 @@
 
                 <!-- Dashboard -->
                 <a href="{{ route('dashboard') }}"
-                    class="flex flex-col items-center text-center hover:text-byzantine {{ request()->routeIs('dashboard') ? 'text-byzantine font-semibold' : '' }}">
+                    class="flex flex-col items-center text-center rounded-xl px-2 py-2 transition-colors duration-200 hover:text-byzantine hover:bg-raisin2/70 {{ request()->routeIs('dashboard') ? 'text-byzantine font-semibold bg-raisin2/70' : 'text-platinum/85' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-7 h-7" viewBox="0 0 24 24">
                         <path d="M2.25 12L12 3l9.75 9v8.25a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V15a.75.75 0 00-.75-.75H10.5A.75.75 0 009.75 15v5.25a.75.75 0 01-.75.75H3a.75.75 0 01-.75-.75V12z" />
                     </svg>
@@ -44,7 +40,7 @@
 
                 <!-- Service 3 -->
                 <a href="{{ route('service3.plans.index') }}"
-                    class="flex flex-col items-center text-center hover:text-byzantine {{ request()->routeIs('service3.plans.*') ? 'text-byzantine font-semibold' : '' }}">
+                    class="flex flex-col items-center text-center rounded-xl px-2 py-2 transition-colors duration-200 hover:text-byzantine hover:bg-raisin2/70 {{ request()->routeIs('service3.plans.*') ? 'text-byzantine font-semibold bg-raisin2/70' : 'text-platinum/85' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-7 h-7" viewBox="0 0 24 24">
                         <path d="M12 2.25a.75.75 0 0 1 .75.75v1.652a7.5 7.5 0 0 1 6.598 6.598H21a.75.75 0 0 1 0 1.5h-1.652a7.5 7.5 0 0 1-6.598 6.598V21a.75.75 0 0 1-1.5 0v-1.652a7.5 7.5 0 0 1-6.598-6.598H3a.75.75 0 0 1 0-1.5h1.652a7.5 7.5 0 0 1 6.598-6.598V3a.75.75 0 0 1 .75-.75Zm0 3.75a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm-.75 3.25a.75.75 0 0 1 1.5 0V12c0 .2-.08.39-.22.53l-1.75 1.75a.75.75 0 0 1-1.06-1.06l1.53-1.53V9.25Z" />
                     </svg>
@@ -53,7 +49,7 @@
 
                 <!-- Add -->
                 <a href="{{ route('transactions.create') }}"
-                    class="flex flex-col items-center text-center hover:text-byzantine {{ request()->routeIs('transactions.create') ? 'text-byzantine font-semibold' : '' }}">
+                    class="flex flex-col items-center text-center rounded-xl px-2 py-2 transition-colors duration-200 hover:text-byzantine hover:bg-raisin2/70 {{ request()->routeIs('transactions.create') ? 'text-byzantine font-semibold bg-raisin2/70' : 'text-platinum/85' }}">
                     <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 20 20"
                         xmlns="http://www.w3.org/2000/svg">
                         <path fill-rule="evenodd"
@@ -65,7 +61,7 @@
 
                 <!-- History -->
                 <a href="{{ route('transactions.index') }}"
-                    class="flex flex-col items-center text-center hover:text-byzantine {{ request()->routeIs('transactions.index') ? 'text-byzantine font-semibold' : '' }}">
+                    class="flex flex-col items-center text-center rounded-xl px-2 py-2 transition-colors duration-200 hover:text-byzantine hover:bg-raisin2/70 {{ request()->routeIs('transactions.index') ? 'text-byzantine font-semibold bg-raisin2/70' : 'text-platinum/85' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-7 h-7" viewBox="0 0 24 24">
                         <path fill-rule="evenodd"
                             d="M2.625 6.75a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0A.75.75 0 0 1 8.25 6h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75ZM2.625 12a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0ZM7.5 12a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12A.75.75 0 0 1 7.5 12Zm-4.875 5.25a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75Z"
@@ -75,7 +71,7 @@
                 </a>
 
                 <a href="{{ route('stats.index') }}"
-                    class="flex flex-col items-center text-center hover:text-byzantine {{ request()->routeIs('stats.index') ? 'text-byzantine font-semibold' : '' }}">
+                    class="flex flex-col items-center text-center rounded-xl px-2 py-2 transition-colors duration-200 hover:text-byzantine hover:bg-raisin2/70 {{ request()->routeIs('stats.index') ? 'text-byzantine font-semibold bg-raisin2/70' : 'text-platinum/85' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-7 h-7" viewBox="0 0 24 24">
                         <path
                             d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.036-.84-1.875-1.875-1.875h-.75ZM9.75 8.625c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-.75a1.875 1.875 0 0 1-1.875-1.875V8.625ZM3 13.125c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v6.75c0 1.035-.84 1.875-1.875 1.875h-.75A1.875 1.875 0 0 1 3 19.875v-6.75Z" />
@@ -101,7 +97,7 @@
             @endisset
 
             <!-- Page Content -->
-            <main class="flex-1 p-6 bg-night text-platinum">
+            <main class="flex-1 p-6 bg-transparent text-platinum">
                 {{ $slot }}
             </main>
         </div>

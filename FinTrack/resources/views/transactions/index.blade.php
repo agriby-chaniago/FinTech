@@ -1,7 +1,7 @@
 <x-app-layout>
-    <div class="mx-auto py-12 px-6 max-w-7xl font-sans animate-fadeIn">
+    <div class="mx-auto py-10 md:py-12 px-4 md:px-6 max-w-7xl font-sans animate-fadeIn">
 
-        <h2 class="text-lg font-semibold mb-4 text-platinum pl-2 tracking-wide">Riwayat Transaksi</h2>
+        <h2 class="fin-title text-xl md:text-2xl mb-4 pl-2">Riwayat Transaksi</h2>
 
         {{-- Simpan data transaksi secara aman di sini --}}
         <script id="transactions-data" type="application/json">
@@ -115,11 +115,11 @@
                     const type = this.normalizeType(transaction);
 
                     if (type === 'income') {
-                        return 'text-green-400';
+                        return 'text-ctp-green';
                     }
 
                     if (type === 'expense') {
-                        return 'text-red-400';
+                        return 'text-ctp-red';
                     }
 
                     return 'text-platinum';
@@ -128,11 +128,11 @@
                     const type = this.normalizeType(transaction);
 
                     if (type === 'income') {
-                        return 'text-cyan-300';
+                        return 'text-ctp-sky';
                     }
 
                     if (type === 'expense') {
-                        return 'text-yellow-300';
+                        return 'text-ctp-yellow';
                     }
 
                     return 'text-platinum/70';
@@ -143,54 +143,55 @@
                 }
             }"
             x-init="init()"
-            class="bg-raisin2 rounded-2xl p-6 m-2 mt-4 shadow-md text-platinum"
+            class="fin-surface-card p-5 md:p-6 mt-3 md:mt-4 text-platinum"
         >
             <input
                 type="text"
                 x-model="search"
                 placeholder="Cari deskripsi atau kategori..."
-                class="mb-4 w-full max-w-sm rounded-lg border border-gray-600 bg-transparent px-4 py-2 text-platinum placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-byzantine focus:border-byzantine transition"
+                class="mb-4 w-full md:max-w-md rounded-lg border border-raisin3 bg-transparent px-4 py-2.5 text-sm md:text-base text-platinum placeholder-ctp-overlay1 focus:outline-none focus:ring-2 focus:ring-byzantine focus:border-byzantine transition"
             />
 
+            <div class="fin-scroll-x -mx-2 px-2 md:mx-0 md:px-0">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="border-b border-raisin">
-                        <th class="py-3 px-4 font-medium tracking-wide">Tanggal</th>
-                        <th class="py-3 px-4 font-medium tracking-wide">Kategori Transaksi</th>
-                        <th class="py-3 px-4 font-medium tracking-wide">Kategori AI (Groq)</th>
-                        <th class="py-3 px-4 font-medium tracking-wide">Nominal</th>
-                        <th class="py-3 px-4 font-medium tracking-wide">Deskripsi</th>
-                        <th class="py-3 px-4 font-medium tracking-wide text-center">Aksi</th>
+                    <tr class="border-b border-raisin3/70">
+                        <th class="fin-table-head">Tanggal</th>
+                        <th class="fin-table-head">Kategori Transaksi</th>
+                        <th class="fin-table-head">Kategori AI (Groq)</th>
+                        <th class="fin-table-head">Nominal</th>
+                        <th class="fin-table-head">Deskripsi</th>
+                        <th class="fin-table-head text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <template x-for="transaction in filteredTransactions" :key="transaction.id">
-                        <tr class="border-b border-raisin hover:bg-raisin transition-colors duration-200">
-                            <td class="py-3 px-4" x-text="formatDate(normalizeDate(transaction))"></td>
-                            <td class="py-3 px-4">
+                        <tr class="border-b border-raisin3/50 hover:bg-raisin transition-colors duration-200">
+                            <td class="fin-table-cell" x-text="formatDate(normalizeDate(transaction))"></td>
+                            <td class="fin-table-cell">
                                 <span
                                     :class="transactionCategoryColorClass(transaction)"
                                     x-text="formatTransactionCategory(transaction)"
                                 ></span>
                             </td>
-                            <td class="py-3 px-4">
+                            <td class="fin-table-cell">
                                 <span
                                     :class="aiCategoryColorClass(transaction)"
                                     x-text="formatAiCategory(transaction)"
                                 ></span>
                             </td>
-                            <td class="py-3 px-4 font-mono" x-text="formatCurrency(normalizeAmount(transaction))"></td>
-                            <td class="py-3 px-4" x-text="normalizeDescription(transaction)"></td>
-                            <td class="py-3 px-4 text-center space-x-2">
+                            <td class="fin-table-cell font-mono whitespace-nowrap" x-text="formatCurrency(normalizeAmount(transaction))"></td>
+                            <td class="fin-table-cell max-w-xs md:max-w-md break-words" x-text="normalizeDescription(transaction)"></td>
+                            <td class="fin-table-cell text-center whitespace-nowrap space-x-2">
                                 <a
                                     :href="`/transactions/${transaction.id}/edit`"
-                                    class="text-yellow-400 hover:underline text-sm"
+                                    class="inline-flex items-center rounded-md border border-ctp-yellow/35 px-2 py-1 text-xs font-medium text-ctp-yellow hover:bg-ctp-yellow/10 transition"
                                 >Edit</a>
                                 <form :action="`/transactions/${transaction.id}`" method="POST" class="inline">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" onclick="return confirm('Yakin hapus transaksi ini?')"
-                                        class="text-red-400 hover:underline text-sm"
+                                        class="inline-flex items-center rounded-md border border-ctp-red/35 px-2 py-1 text-xs font-medium text-ctp-red hover:bg-ctp-red/10 transition"
                                     >Hapus</button>
                                 </form>
                             </td>
@@ -205,6 +206,7 @@
                     </template>
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </x-app-layout>

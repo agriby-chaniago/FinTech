@@ -8,34 +8,16 @@
 
     <title>{{ config('app.name', 'FinTrack') }}</title>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <style>
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
 </head>
 
 <body class="font-sans antialiased bg-gradient-to-br from-night via-raisin to-raisin2">
-    <div class="min-h-screen flex flex-col items-center justify-center px-6 py-12 animate-[fadeIn_1s_ease-out]">
+    <div class="min-h-screen flex flex-col items-center justify-center px-6 py-12 animate-fadeIn">
         <!-- Logo -->
         <div class="mb-12">
             <a href="{{ url('/dashboard') }}"
-                class="text-byzantine text-2xl font-light tracking-widest uppercase block text-center select-none hover:text-byzantine/70 transition-colors duration-300">
+                class="text-byzantine text-2xl font-medium tracking-[0.12em] uppercase block text-center select-none hover:text-byzantine/70 transition-colors duration-300">
                 FinTrack
             </a>
         </div>

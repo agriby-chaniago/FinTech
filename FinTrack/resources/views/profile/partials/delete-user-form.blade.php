@@ -11,7 +11,7 @@
 <x-danger-button
     x-data=""
     x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
-    class="mt-4 w-full bg-byzantine hover:bg-byzantine-hover text-platinum font-semibold py-2 rounded transition-colors duration-300 text-left"
+    class="mt-4 w-full bg-ctp-red hover:bg-ctp-maroon text-night font-semibold py-2 rounded transition-colors duration-300 text-left"
 >
     {{ __('Delete Account') }}
 </x-danger-button>
@@ -32,12 +32,12 @@
         <div class="mt-6 flex justify-end gap-4">
             <x-secondary-button
                 x-on:click="$dispatch('close')"
-                class="bg-raisin hover:bg-gray-700 text-platinum font-semibold py-2 px-4 rounded transition-colors duration-300"
+                class="bg-raisin hover:bg-raisin3 text-platinum font-semibold py-2 px-4 rounded transition-colors duration-300"
             >
                 {{ __('Cancel') }}
             </x-secondary-button>
 
-            <x-danger-button class="bg-red-600 hover:bg-red-700 text-platinum font-semibold py-2 px-4 rounded transition-colors duration-300">
+            <x-danger-button class="bg-ctp-red hover:bg-ctp-maroon text-night font-semibold py-2 px-4 rounded transition-colors duration-300">
                 {{ __('Delete Account') }}
             </x-danger-button>
         </div>

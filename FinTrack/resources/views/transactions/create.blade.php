@@ -1,17 +1,19 @@
 <x-app-layout>
-  <div class="mx-auto py-12 px-6 text-platinum font-sans animate-fadeIn max-w-3xl">
-    <h2 class="text-4xl font-semibold mb-10 text-byzantine tracking-wider">Tambah Transaksi</h2>
+  <div class="mx-auto py-8 md:py-10 px-5 md:px-8 text-platinum font-sans animate-fadeIn max-w-3xl fin-surface-card">
+    <p class="fin-kicker mb-2">Transaction</p>
+    <h2 class="fin-title text-2xl md:text-3xl mb-2 text-byzantine">Tambah Transaksi</h2>
+    <p class="fin-subtitle max-w-2xl mb-8">Catat pemasukan atau pengeluaran baru agar statistik dashboard tetap real-time.</p>
 
     {{-- Notifikasi sukses --}}
     @if (session('success'))
-      <div class="bg-green-800 bg-opacity-25 text-green-300 p-4 mb-8 rounded-lg text-sm leading-relaxed">
+      <div class="border border-ctp-green/40 bg-ctp-green/15 text-ctp-green p-4 mb-8 rounded-lg text-sm leading-relaxed">
         {{ session('success') }}
       </div>
     @endif
 
     {{-- Error Validation --}}
     @if ($errors->any())
-      <div class="bg-red-800 bg-opacity-25 text-red-300 p-4 mb-8 rounded-lg text-sm leading-relaxed">
+      <div class="border border-ctp-red/40 bg-ctp-red/15 text-ctp-red p-4 mb-8 rounded-lg text-sm leading-relaxed">
         <ul class="list-disc list-inside space-y-1">
           @foreach ($errors->all() as $error)
             <li>{{ $error }}</li>
@@ -20,11 +22,11 @@
       </div>
     @endif
 
-    <form action="{{ route('transactions.store') }}" method="POST" class="space-y-8">
+    <form action="{{ route('transactions.store') }}" method="POST" class="space-y-6 md:space-y-7">
       @csrf
 
       <div>
-        <label for="nominal" class="block mb-3 font-semibold text-platinum text-lg">Nominal (Rp)</label>
+        <label for="nominal" class="block mb-2 font-semibold text-platinum/90 text-xs uppercase tracking-[0.12em]">Nominal (Rp)</label>
         <input
           type="number"
           id="nominal"
@@ -33,56 +35,56 @@
           placeholder="Masukkan nominal"
           value="{{ old('nominal') }}"
           required
-          class="w-full rounded-lg border border-gray-500 bg-transparent px-5 py-3 text-platinum placeholder-gray-500
+          class="w-full rounded-lg border border-raisin3 bg-transparent px-4 py-3 text-sm md:text-base text-platinum placeholder-ctp-overlay1
                  focus:outline-none focus:ring-2 focus:ring-byzantine focus:border-byzantine transition"
         >
       </div>
 
       <div>
-        <label for="kategori" class="block mb-3 font-semibold text-platinum text-lg">Kategori</label>
+        <label for="kategori" class="block mb-2 font-semibold text-platinum/90 text-xs uppercase tracking-[0.12em]">Kategori</label>
         <select
           id="kategori"
           name="kategori"
           required
-          class="w-full rounded-lg border border-gray-500 bg-transparent px-5 py-3 text-platinum
+          class="w-full rounded-lg border border-raisin3 bg-transparent px-4 py-3 text-sm md:text-base text-platinum
                  focus:outline-none focus:ring-2 focus:ring-byzantine focus:border-byzantine transition"
         >
-          <option value="" disabled {{ old('kategori') ? '' : 'selected' }} class="text-gray-500">Pilih Kategori</option>
+          <option value="" disabled {{ old('kategori') ? '' : 'selected' }} class="text-ctp-overlay1 bg-raisin">Pilih Kategori</option>
           <option value="pemasukan" {{ old('kategori') == 'pemasukan' ? 'selected' : '' }}>Pemasukan</option>
           <option value="pengeluaran" {{ old('kategori') == 'pengeluaran' ? 'selected' : '' }}>Pengeluaran</option>
         </select>
       </div>
 
       <div>
-        <label for="tanggal" class="block mb-3 font-semibold text-platinum text-lg">Tanggal</label>
+        <label for="tanggal" class="block mb-2 font-semibold text-platinum/90 text-xs uppercase tracking-[0.12em]">Tanggal</label>
         <input
           type="date"
           id="tanggal"
           name="tanggal"
           value="{{ old('tanggal', date('Y-m-d')) }}"
           required
-          class="w-full rounded-lg border border-gray-500 bg-transparent px-5 py-3 text-platinum
+          class="w-full rounded-lg border border-raisin3 bg-transparent px-4 py-3 text-sm md:text-base text-platinum
                  focus:outline-none focus:ring-2 focus:ring-byzantine focus:border-byzantine transition"
         >
       </div>
 
       <div>
-        <label for="deskripsi" class="block mb-3 font-semibold text-platinum text-lg">Deskripsi</label>
+        <label for="deskripsi" class="block mb-2 font-semibold text-platinum/90 text-xs uppercase tracking-[0.12em]">Deskripsi</label>
         <input
           type="text"
           id="deskripsi"
           name="deskripsi"
           placeholder="Masukkan deskripsi"
           value="{{ old('deskripsi') }}"
-          class="w-full rounded-lg border border-gray-500 bg-transparent px-5 py-3 text-platinum placeholder-gray-500
+          class="w-full rounded-lg border border-raisin3 bg-transparent px-4 py-3 text-sm md:text-base text-platinum placeholder-ctp-overlay1
                  focus:outline-none focus:ring-2 focus:ring-byzantine focus:border-byzantine transition"
         >
       </div>
 
-      <div class="flex justify-end">
+      <div class="flex justify-end pt-2">
         <button
           type="submit"
-          class="rounded-lg bg-byzantine px-10 py-3 font-semibold text-platinum hover:bg-byzantine-hover transition duration-300"
+          class="w-full sm:w-auto rounded-lg bg-byzantine px-8 py-3 font-semibold text-night hover:bg-byzantine-hover transition duration-300"
         >
           Simpan
         </button>

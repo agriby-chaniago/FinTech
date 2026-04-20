@@ -19,11 +19,11 @@
                 id="name"
                 name="name"
                 type="text"
-                class="mt-1 block w-full bg-raisin border border-gray-600 text-platinum placeholder-platinum/60 rounded py-2 px-3 focus:ring-2 focus:ring-byzantine focus:outline-none transition"
+                class="mt-1 block w-full bg-raisin border border-raisin3 text-platinum placeholder-platinum/60 rounded py-2 px-3 focus:ring-2 focus:ring-byzantine focus:outline-none transition"
                 :value="old('name', $user->name)"
                 required autofocus autocomplete="name"
             />
-            <x-input-error class="mt-2 text-red-500" :messages="$errors->get('name')" />
+            <x-input-error class="mt-2 text-ctp-red" :messages="$errors->get('name')" />
         </div>
 
         <div>
@@ -32,11 +32,11 @@
                 id="email"
                 name="email"
                 type="email"
-                class="mt-1 block w-full bg-raisin border border-gray-600 text-platinum placeholder-platinum/60 rounded py-2 px-3 focus:ring-2 focus:ring-byzantine focus:outline-none transition"
+                class="mt-1 block w-full bg-raisin border border-raisin3 text-platinum placeholder-platinum/60 rounded py-2 px-3 focus:ring-2 focus:ring-byzantine focus:outline-none transition"
                 :value="old('email', $user->email)"
                 required autocomplete="username"
             />
-            <x-input-error class="mt-2 text-red-500" :messages="$errors->get('email')" />
+            <x-input-error class="mt-2 text-ctp-red" :messages="$errors->get('email')" />
         </div>
 
         <div class="flex items-center gap-4">

@@ -5,17 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FinTrack</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
 </head>
 <body class="h-full font-sans antialiased bg-gradient-to-br from-night via-raisin to-raisin2">
 
     <div class="min-h-screen flex items-center px-8 sm:px-16 py-12">
-        <div class="space-y-10 animate-[fadeIn_1s_ease-out] max-w-3xl">
+        <div class="space-y-10 animate-fadeIn max-w-3xl">
             <h1 class="text-5xl sm:text-6xl font-extrabold text-byzantine">
                 FinTrack
             </h1>
