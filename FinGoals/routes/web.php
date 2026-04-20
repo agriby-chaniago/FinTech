@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\OidcController;
 use App\Http\Controllers\Web\GoalPageController;
 use App\Http\Controllers\Web\PlannerPageController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -18,7 +19,17 @@ Route::middleware('auth')->group(function (): void {
         ->name('oidc.logout');
 });
 
-Route::redirect('/', '/planner');
+Route::get('/', function (): \Illuminate\Http\RedirectResponse|\Illuminate\View\View {
+    if (! (bool) config('keycloak.enabled', false)) {
+        return view('welcome');
+    }
+
+    if (Auth::check()) {
+        return redirect()->route('web.planner.index');
+    }
+
+    return redirect()->route('oidc.redirect');
+});
 
 Route::middleware('hybrid.web_auth')->name('web.')->group(function (): void {
     Route::get('/planner', [PlannerPageController::class, 'index'])->name('planner.index');

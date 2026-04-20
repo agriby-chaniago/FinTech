@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\GoalController;
+use App\Http\Controllers\Api\LogoutSyncController;
 use App\Http\Controllers\Api\PlanController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +11,7 @@ Route::middleware('api.key')->group(function (): void {
 
 Route::middleware('api.key')->prefix('internal')->group(function (): void {
     Route::post('/plan', [PlanController::class, 'store']);
+    Route::post('/auth/logout-sync', [LogoutSyncController::class, 'revoke']);
 });
 
 Route::middleware(['hybrid.api_auth', 'auth.principal'])->prefix('user')->group(function (): void {

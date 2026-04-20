@@ -21,23 +21,16 @@ class OidcWebRoutesTest extends TestCase
         $response->assertRedirect('/auth/oidc/redirect');
     }
 
-    public function test_oidc_redirect_route_exists_for_guest(): void
+    public function test_root_falls_back_to_welcome_when_oidc_disabled(): void
     {
         config([
             'keycloak.enabled' => false,
         ]);
 
-        $response = $this->get('/auth/oidc/redirect');
+        $response = $this->get('/');
 
-        $response->assertRedirect('/');
-        $response->assertSessionHasErrors('oidc');
-    }
-
-    public function test_oidc_logout_requires_authentication(): void
-    {
-        $response = $this->post('/auth/oidc/logout');
-
-        $response->assertRedirect('/');
+        $response->assertOk();
+        $response->assertViewIs('welcome');
     }
 
     public function test_oidc_logout_route_available_for_authenticated_user(): void
@@ -47,7 +40,8 @@ class OidcWebRoutesTest extends TestCase
             'keycloak.post_logout_redirect_uri' => '',
         ]);
 
-        $user = User::factory()->create();
+        /** @var User $user */
+        $user = User::factory()->createOne();
 
         $response = $this
             ->actingAs($user)

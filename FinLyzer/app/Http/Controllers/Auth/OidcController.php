@@ -8,9 +8,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class OidcController extends Controller
 {
@@ -252,6 +255,8 @@ class OidcController extends Controller
             return redirect('/');
         }
 
+        $keycloakSub = $this->resolveAuthenticatedKeycloakSub();
+
         $logoutEndpoint = (string) config('keycloak.endpoints.logout', '');
         $postLogoutRedirectUri = (string) config('keycloak.post_logout_redirect_uri', '');
         $clientId = (string) config('keycloak.client_id', '');
@@ -261,6 +266,11 @@ class OidcController extends Controller
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        if ($keycloakSub !== '') {
+            $this->revokeLocalSessionsByKeycloakSub($keycloakSub);
+            $this->propagateCrossServiceLogoutSync($keycloakSub);
+        }
 
         if ($logoutEndpoint === '' || $postLogoutRedirectUri === '') {
             return redirect('/');
@@ -279,6 +289,106 @@ class OidcController extends Controller
         }
 
         return redirect()->away($logoutEndpoint.'?'.http_build_query($query));
+    }
+
+    private function resolveAuthenticatedKeycloakSub(): string
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            return '';
+        }
+
+        return trim((string) $user->keycloak_sub);
+    }
+
+    private function revokeLocalSessionsByKeycloakSub(string $keycloakSub): void
+    {
+        $user = User::query()
+            ->where('keycloak_sub', $keycloakSub)
+            ->first();
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        DB::table('sessions')
+            ->where('user_id', $user->getKey())
+            ->delete();
+    }
+
+    private function propagateCrossServiceLogoutSync(string $keycloakSub): void
+    {
+        $targets = (array) config('services.logout_sync.targets', []);
+        $timeout = max(1, (int) config('services.logout_sync.timeout', 5));
+
+        foreach ($targets as $target) {
+            if (! is_array($target)) {
+                continue;
+            }
+
+            $targetUrl = trim((string) data_get($target, 'url', ''));
+            $apiKey = trim((string) data_get($target, 'api_key', ''));
+
+            if ($targetUrl === '' || $apiKey === '' || $this->isCurrentApplicationUrl($targetUrl)) {
+                continue;
+            }
+
+            try {
+                Http::acceptJson()
+                    ->timeout($timeout)
+                    ->withHeaders([
+                        'x-api-key' => $apiKey,
+                    ])
+                    ->post($targetUrl, [
+                        'keycloak_sub' => $keycloakSub,
+                    ]);
+            } catch (Throwable $exception) {
+                Log::warning('Failed to propagate cross-service logout sync request.', [
+                    'target' => $targetUrl,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    private function isCurrentApplicationUrl(string $targetUrl): bool
+    {
+        $appUrl = trim((string) config('app.url', ''));
+
+        if ($appUrl === '') {
+            return false;
+        }
+
+        $targetParts = parse_url($targetUrl);
+        $appParts = parse_url($appUrl);
+
+        if (! is_array($targetParts) || ! is_array($appParts)) {
+            return false;
+        }
+
+        $targetHost = strtolower((string) ($targetParts['host'] ?? ''));
+        $appHost = strtolower((string) ($appParts['host'] ?? ''));
+
+        if ($targetHost === '' || $appHost === '' || $targetHost !== $appHost) {
+            return false;
+        }
+
+        return $this->resolveUrlPort($targetParts) === $this->resolveUrlPort($appParts);
+    }
+
+    /**
+     * @param array<string, mixed> $urlParts
+     */
+    private function resolveUrlPort(array $urlParts): int
+    {
+        if (isset($urlParts['port']) && is_numeric($urlParts['port'])) {
+            return (int) $urlParts['port'];
+        }
+
+        $scheme = strtolower((string) ($urlParts['scheme'] ?? 'http'));
+
+        return $scheme === 'https' ? 443 : 80;
     }
 
     /**

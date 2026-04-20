@@ -73,4 +73,22 @@ return [
         'timeout' => env('SERVICE_C_PLANNER_TIMEOUT', 10),
     ],
 
+    'logout_sync' => [
+        'timeout' => (int) env('LOGOUT_SYNC_TIMEOUT', 5),
+        'targets' => [
+            [
+                'url' => env('FINTRACK_LOGOUT_SYNC_URL', 'http://127.0.0.1:8001/api/internal/auth/logout-sync'),
+                'api_key' => env('FINTRACK_LOGOUT_SYNC_API_KEY', ''),
+            ],
+            [
+                'url' => env('FINLYZER_LOGOUT_SYNC_URL', 'http://127.0.0.1:8002/api/internal/auth/logout-sync'),
+                'api_key' => env('FINLYZER_LOGOUT_SYNC_API_KEY', ''),
+            ],
+            [
+                'url' => env('FINGOALS_LOGOUT_SYNC_URL', 'http://127.0.0.1:8003/api/internal/auth/logout-sync'),
+                'api_key' => env('FINGOALS_LOGOUT_SYNC_API_KEY', ''),
+            ],
+        ],
+    ],
+
 ];

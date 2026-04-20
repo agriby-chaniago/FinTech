@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\LogoutSyncController;
 use App\Http\Controllers\AnalysisController;
 use Illuminate\Support\Facades\Route;
 
@@ -9,6 +10,7 @@ Route::middleware('api.key')->prefix('internal')->group(function (): void {
 	Route::post('/analyze/auto/run', [AnalysisController::class, 'analyzeAutoRun']);
 	Route::post('/analyze/send-service-c', [AnalysisController::class, 'sendToServiceC']);
 	Route::get('/analyze/auto/latest', [AnalysisController::class, 'latestForServiceC']);
+	Route::post('/auth/logout-sync', [LogoutSyncController::class, 'revoke']);
 });
 
 Route::middleware(['hybrid.api_auth', 'auth.principal'])->prefix('user')->group(function (): void {

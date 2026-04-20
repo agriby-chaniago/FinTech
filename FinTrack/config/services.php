@@ -42,12 +42,12 @@ return [
     ],
 
     'analyzer' => [
-        'url' => env('ANALYZER_SERVICE_URL', 'http://localhost:8002/api/internal/analyze'),
+        'url' => env('ANALYZER_SERVICE_URL', 'http://127.0.0.1:8002/api/internal/analyze'),
         'api_key' => env('ANALYZER_SERVICE_API_KEY', env('INTER_SERVICE_API_KEY')),
     ],
 
     'planner' => [
-        'url' => env('PLANNER_SERVICE_URL', 'http://localhost:8003/api/internal/plan'),
+        'url' => env('PLANNER_SERVICE_URL', 'http://127.0.0.1:8003/api/internal/plan'),
         'api_key' => env('PLANNER_SERVICE_API_KEY', env('INTER_SERVICE_API_KEY')),
     ],
 
@@ -63,6 +63,24 @@ return [
     'inter_service' => [
         'api_key' => env('INTER_SERVICE_API_KEY'),
         'allow_legacy_fallback' => env('INTER_SERVICE_ALLOW_LEGACY_FALLBACK', true),
+    ],
+
+    'logout_sync' => [
+        'timeout' => (int) env('LOGOUT_SYNC_TIMEOUT', 5),
+        'targets' => [
+            [
+                'url' => env('FINTRACK_LOGOUT_SYNC_URL', 'http://127.0.0.1:8001/api/internal/auth/logout-sync'),
+                'api_key' => env('FINTRACK_LOGOUT_SYNC_API_KEY', ''),
+            ],
+            [
+                'url' => env('FINLYZER_LOGOUT_SYNC_URL', 'http://127.0.0.1:8002/api/internal/auth/logout-sync'),
+                'api_key' => env('FINLYZER_LOGOUT_SYNC_API_KEY', ''),
+            ],
+            [
+                'url' => env('FINGOALS_LOGOUT_SYNC_URL', 'http://127.0.0.1:8003/api/internal/auth/logout-sync'),
+                'api_key' => env('FINGOALS_LOGOUT_SYNC_API_KEY', ''),
+            ],
+        ],
     ],
 
 ];

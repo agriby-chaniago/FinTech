@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'api.key' => \App\Http\Middleware\ValidateApiKey::class,
             'hybrid.api_auth' => \App\Http\Middleware\HybridApiAuthMiddleware::class,
+            'hybrid.web_auth' => \App\Http\Middleware\HybridWebAuthMiddleware::class,
             'auth.principal' => \App\Http\Middleware\RequireAuthenticatedUserMiddleware::class,
         ]);
     })

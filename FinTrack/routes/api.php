@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\Api\FinanceSummaryController;
+use App\Http\Controllers\Api\LogoutSyncController;
 use App\Http\Controllers\Api\Service2PullController;
 use App\Http\Controllers\Api\Service3PlanResultController;
 use App\Http\Controllers\Api\TransactionController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware('service.api_key')->prefix('internal/auth')->group(function (): void {
+    Route::post('/logout-sync', [LogoutSyncController::class, 'revoke']);
+});
 
 Route::middleware(['hybrid.api_auth', 'auth.principal'])->group(function (): void {
     Route::apiResource('transactions', TransactionController::class)
