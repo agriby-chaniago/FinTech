@@ -20,7 +20,7 @@
                 FinTrack
             </h1>
             <p class="text-xl sm:text-2xl text-platinum/80 leading-relaxed">
-                Aplikasi manajemen keuangan minimalis. <br> Silakan login atau daftar untuk mulai menggunakan.
+                Aplikasi manajemen keuangan minimalis. <br> Login menggunakan akun Keycloak untuk mulai menggunakan.
             </p>
 
             <div class="flex flex-col sm:flex-row gap-4">
@@ -30,16 +30,10 @@
                         Dashboard
                     </a>
                 @else
-                    <a href="{{ route('login') }}"
+                    <a href="{{ route('oidc.redirect') }}"
                        class="px-6 py-3 text-lg bg-byzantine text-night rounded-lg font-semibold hover:bg-byzantine/90 transition">
-                        Login
+                        Masuk dengan Keycloak
                     </a>
-                    @if (Route::has('register'))
-                        <a href="{{ route('register') }}"
-                           class="px-6 py-3 text-lg border border-byzantine text-byzantine rounded-lg font-semibold hover:bg-raisin transition">
-                            Register
-                        </a>
-                    @endif
                 @endauth
             </div>
         </div>

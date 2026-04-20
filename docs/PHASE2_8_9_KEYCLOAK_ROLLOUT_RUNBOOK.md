@@ -95,6 +95,8 @@ Track at least:
 ### Cutover Actions
 
 - Disable local user-facing auth routes in A/B/C.
+- FinTrack: remove legacy web auth routes (`/login`, `/register`, forgot/reset password, email verification).
+- FinTrack: remove legacy API auth endpoints (`/api/auth/register`, `/api/auth/login`, `/api/auth/logout`).
 - Keep internal service API key contract for pipeline internals.
 - Remove legacy fallback endpoints only after stability window.
 - Freeze endpoint contract changes for one release cycle.

@@ -1,22 +1,33 @@
 <?php
 
+use App\Http\Controllers\Auth\OidcController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Service3PlanController;
-use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\StatsController;
+use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware('guest')->group(function (): void {
+    Route::get('/auth/oidc/redirect', [OidcController::class, 'redirect'])
+        ->name('oidc.redirect');
+
+    Route::get('/auth/oidc/callback', [OidcController::class, 'callback'])
+        ->name('oidc.callback');
+});
+
+Route::post('/auth/oidc/logout', [OidcController::class, 'logout'])
+    ->name('oidc.logout');
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-// Dashboard route (dengan total pemasukan/pengeluaran)
-Route::get('/dashboard', [TransactionController::class, 'dashboard'])
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
-
 // Group semua route yang memerlukan autentikasi
-Route::middleware('auth')->group(function () {
+Route::middleware('hybrid.web_auth')->group(function (): void {
+
+    // Dashboard route (dengan total pemasukan/pengeluaran)
+    Route::get('/dashboard', [TransactionController::class, 'dashboard'])
+        ->name('dashboard');
 
     // Profile user
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -34,5 +45,3 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/stats', [StatsController::class, 'index'])->name('stats.index');
 });
-
-require __DIR__.'/auth.php';
