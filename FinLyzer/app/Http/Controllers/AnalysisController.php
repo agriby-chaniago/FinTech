@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\FintrackAutoAnalyzeService;
 use App\Services\FintrackFeedSyncStateService;
 use App\Services\FinancialAnalysisService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,9 +46,28 @@ class AnalysisController extends Controller
             );
 
             $resolvedEmail = $request->resolvedEmail();
+            $resolvedName = null;
+
+            $authenticatedUser = Auth::user();
+
+            if ($authenticatedUser instanceof User) {
+                $resolvedName = trim((string) $authenticatedUser->name);
+            } elseif (is_string($resolvedEmail) && $resolvedEmail !== '') {
+                $resolvedUser = User::query()
+                    ->whereRaw('LOWER(email) = ?', [$resolvedEmail])
+                    ->first();
+
+                if ($resolvedUser instanceof User) {
+                    $resolvedName = trim((string) $resolvedUser->name);
+                }
+            }
 
             if (is_array($result['source'] ?? null) && is_string($resolvedEmail) && $resolvedEmail !== '') {
                 $result['source']['user_email'] = $resolvedEmail;
+            }
+
+            if (is_array($result['source'] ?? null) && is_string($resolvedName) && $resolvedName !== '') {
+                $result['source']['user_name'] = $resolvedName;
             }
         } catch (Throwable $exception) {
             return response()->json([
@@ -58,20 +78,48 @@ class AnalysisController extends Controller
         return response()->json($result);
     }
 
-    public function analyzeAutoRun(): JsonResponse
+    public function analyzeAutoRun(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'date_from' => ['nullable', 'date_format:Y-m-d'],
+            'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+        ]);
+
+        $dateFrom = $validated['date_from'] ?? null;
+        $dateTo = $validated['date_to'] ?? null;
+
+        $resolvedSince = null;
+        $useSavedSince = true;
+
+        if (is_string($dateFrom) || is_string($dateTo)) {
+            $useSavedSince = false;
+        }
+
+        if (is_string($dateFrom) && $dateFrom !== '') {
+            $resolvedSince = CarbonImmutable::createFromFormat('Y-m-d', $dateFrom, 'UTC')
+                ->startOfDay()
+                ->toIso8601String();
+        }
+
         try {
             $authenticatedUser = Auth::user();
             $authenticatedUserId = $authenticatedUser instanceof User ? (int) $authenticatedUser->id : Auth::id();
 
             $result = $this->fintrackAutoAnalyzeService->run(
-                is_numeric($authenticatedUserId) ? (int) $authenticatedUserId : null
+                is_numeric($authenticatedUserId) ? (int) $authenticatedUserId : null,
+                $resolvedSince,
+                true,
+                $useSavedSince,
+                is_string($dateFrom) ? $dateFrom : null,
+                is_string($dateTo) ? $dateTo : null
             );
 
             $resolvedEmail = null;
+            $resolvedName = null;
 
             if ($authenticatedUser instanceof User) {
                 $resolvedEmail = strtolower(trim((string) $authenticatedUser->email));
+                $resolvedName = trim((string) $authenticatedUser->name);
             } else {
                 $resolvedUserId = data_get($result, 'source.user_id');
 
@@ -80,12 +128,27 @@ class AnalysisController extends Controller
 
                     if ($resolvedUser instanceof User) {
                         $resolvedEmail = strtolower(trim((string) $resolvedUser->email));
+                        $resolvedName = trim((string) $resolvedUser->name);
                     }
                 }
             }
 
             if (is_array($result['source'] ?? null) && is_string($resolvedEmail) && $resolvedEmail !== '') {
                 $result['source']['user_email'] = $resolvedEmail;
+            }
+
+            if (is_array($result['source'] ?? null) && is_string($resolvedName) && $resolvedName !== '') {
+                $result['source']['user_name'] = $resolvedName;
+            }
+
+            if (is_array($result['source'] ?? null)) {
+                if (is_string($dateFrom) && $dateFrom !== '') {
+                    $result['source']['date_from'] = $dateFrom;
+                }
+
+                if (is_string($dateTo) && $dateTo !== '') {
+                    $result['source']['date_to'] = $dateTo;
+                }
             }
         } catch (Throwable $exception) {
             return response()->json([

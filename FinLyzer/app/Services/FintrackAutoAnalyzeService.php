@@ -12,18 +12,20 @@ class FintrackAutoAnalyzeService
     }
 
     /**
-     * @return array{message: string, source: array{user_id: int, fetched_transactions: int, since_used: ?string, since_source: string, next_since: ?string}, analysis: array<string, mixed>|null}
+     * @return array{message: string, source: array{user_id: int, fetched_transactions: int, since_used: ?string, since_source: string, next_since: ?string, date_from: ?string, date_to: ?string}, analysis: array<string, mixed>|null}
      */
     public function run(
         ?int $userId = null,
         ?string $since = null,
         bool $includeSummary = false,
-        bool $useSavedSince = true
+        bool $useSavedSince = true,
+        ?string $dateFrom = null,
+        ?string $dateTo = null
     ): array {
         $resolvedUserId = $userId ?? (int) config('services.fintrack_feed.default_user_id', 2);
 
         $resolvedSince = $since;
-        $sinceSource = 'request';
+        $sinceSource = $resolvedSince !== null ? 'request' : 'none';
 
         if ($resolvedSince === null && $useSavedSince) {
             $resolvedSince = $this->fintrackFeedSyncStateService->getSince($resolvedUserId);
@@ -33,10 +35,14 @@ class FintrackAutoAnalyzeService
         $feed = $this->fintrackFeedService->fetchTransactions(
             $resolvedUserId,
             $resolvedSince,
-            $includeSummary
+            $includeSummary,
+            $dateFrom,
+            $dateTo
         );
 
-        $this->fintrackFeedSyncStateService->saveSince($resolvedUserId, $feed['next_since']);
+        if ($useSavedSince && $dateFrom === null && $dateTo === null) {
+            $this->fintrackFeedSyncStateService->saveSince($resolvedUserId, $feed['next_since']);
+        }
 
         $source = [
             'user_id' => $resolvedUserId,
@@ -44,6 +50,8 @@ class FintrackAutoAnalyzeService
             'since_used' => $feed['since_used'],
             'since_source' => $sinceSource,
             'next_since' => $feed['next_since'],
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
         ];
 
         if ($feed['fetched_count'] === 0) {

@@ -14,7 +14,13 @@ class FintrackFeedService
     /**
      * @return array{transactions: array<int, array{amount: float, category: string, type: string}>, fetched_count: int, next_since: ?string, since_used: ?string}
      */
-    public function fetchTransactions(int $userId, ?string $since = null, bool $includeSummary = false): array
+    public function fetchTransactions(
+        int $userId,
+        ?string $since = null,
+        bool $includeSummary = false,
+        ?string $dateFrom = null,
+        ?string $dateTo = null
+    ): array
     {
         $baseUrl = trim((string) config('services.fintrack_feed.base_url'));
         $apiKey = trim((string) config('services.fintrack_feed.api_key'));
@@ -37,6 +43,14 @@ class FintrackFeedService
 
         if ($since !== null) {
             $query['since'] = $since;
+        }
+
+        if ($dateFrom !== null) {
+            $query['date_from'] = $dateFrom;
+        }
+
+        if ($dateTo !== null) {
+            $query['date_to'] = $dateTo;
         }
 
         if (! $includeSummary) {
@@ -70,8 +84,14 @@ class FintrackFeedService
 
         $rawTransactions = $this->extractRawTransactions($payload);
 
+        $filteredTransactions = $this->filterTransactionsByDateRange(
+            $rawTransactions,
+            $dateFrom,
+            $dateTo
+        );
+
         /** @var array<int, array{amount: float, category: string, type: string}> $transactions */
-        $transactions = collect($rawTransactions)
+        $transactions = collect($filteredTransactions)
             ->map(fn (array $transaction): ?array => $this->normalizeTransaction($transaction))
             ->filter(fn (?array $transaction): bool => $transaction !== null)
             ->values()
@@ -83,6 +103,78 @@ class FintrackFeedService
             'next_since' => $this->extractNextSince($payload),
             'since_used' => $since,
         ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $transactions
+     * @return array<int, array<string, mixed>>
+     */
+    private function filterTransactionsByDateRange(array $transactions, ?string $dateFrom, ?string $dateTo): array
+    {
+        $startTimestamp = $this->resolveRangeTimestamp($dateFrom, true);
+        $endTimestamp = $this->resolveRangeTimestamp($dateTo, false);
+
+        if ($startTimestamp === null && $endTimestamp === null) {
+            return $transactions;
+        }
+
+        /** @var array<int, array<string, mixed>> $filtered */
+        $filtered = collect($transactions)
+            ->filter(function (array $transaction) use ($startTimestamp, $endTimestamp): bool {
+                $transactionTimestamp = $this->extractTransactionTimestamp($transaction);
+
+                if ($transactionTimestamp === null) {
+                    return false;
+                }
+
+                if ($startTimestamp !== null && $transactionTimestamp < $startTimestamp) {
+                    return false;
+                }
+
+                if ($endTimestamp !== null && $transactionTimestamp > $endTimestamp) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->values()
+            ->all();
+
+        return $filtered;
+    }
+
+    private function resolveRangeTimestamp(?string $dateValue, bool $isStart): ?int
+    {
+        if (! is_string($dateValue) || trim($dateValue) === '') {
+            return null;
+        }
+
+        $suffix = $isStart ? ' 00:00:00' : ' 23:59:59';
+        $timestamp = strtotime(trim($dateValue).$suffix);
+
+        return $timestamp !== false ? $timestamp : null;
+    }
+
+    /**
+     * @param array<string, mixed> $transaction
+     */
+    private function extractTransactionTimestamp(array $transaction): ?int
+    {
+        foreach (['transaction_date', 'date', 'tanggal', 'updated_at', 'created_at'] as $key) {
+            $value = $transaction[$key] ?? null;
+
+            if (! is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            $timestamp = strtotime(trim($value));
+
+            if ($timestamp !== false) {
+                return $timestamp;
+            }
+        }
+
+        return null;
     }
 
     private function guardAgainstSelfCall(string $baseUrl): void

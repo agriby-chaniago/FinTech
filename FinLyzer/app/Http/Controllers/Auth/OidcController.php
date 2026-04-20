@@ -34,9 +34,12 @@ class OidcController extends Controller
 
         $state = Str::random(40);
         $nonce = Str::random(40);
+        $codeVerifier = Str::random(96);
+        $codeChallenge = rtrim(strtr(base64_encode(hash('sha256', $codeVerifier, true)), '+/', '-_'), '=');
 
         $request->session()->put('oidc_state', $state);
         $request->session()->put('oidc_nonce', $nonce);
+        $request->session()->put('oidc_code_verifier', $codeVerifier);
 
         $scopes = (array) config('keycloak.scopes', ['openid', 'profile', 'email']);
 
@@ -47,6 +50,8 @@ class OidcController extends Controller
             'scope' => implode(' ', $scopes),
             'state' => $state,
             'nonce' => $nonce,
+            'code_challenge' => $codeChallenge,
+            'code_challenge_method' => 'S256',
         ]);
 
         return redirect()->away($authorizationEndpoint.'?'.$query);
@@ -94,6 +99,16 @@ class OidcController extends Controller
             'code' => $code,
             'redirect_uri' => $redirectUri,
         ];
+
+        $codeVerifier = (string) $request->session()->pull('oidc_code_verifier', '');
+
+        if ($codeVerifier === '') {
+            return redirect('/')->withErrors([
+                'oidc' => 'PKCE code verifier tidak ditemukan di session.',
+            ]);
+        }
+
+        $tokenPayload['code_verifier'] = $codeVerifier;
 
         if ($clientSecret !== '') {
             $tokenPayload['client_secret'] = $clientSecret;
