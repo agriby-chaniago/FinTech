@@ -70,8 +70,16 @@ class AnalysisController extends Controller
                 $result['source']['user_name'] = $resolvedName;
             }
         } catch (Throwable $exception) {
+            $responsePayload = [
+                'message' => $this->resolveAnalyzeGatewayMessage($exception),
+            ];
+
+            if ((bool) config('app.debug')) {
+                $responsePayload['detail'] = $exception->getMessage();
+            }
+
             return response()->json([
-                'message' => $exception->getMessage(),
+                ...$responsePayload,
             ], 502);
         }
 
@@ -83,6 +91,10 @@ class AnalysisController extends Controller
         $validated = $request->validate([
             'date_from' => ['nullable', 'date_format:Y-m-d'],
             'date_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:date_from'],
+        ], [
+            'date_from.date_format' => 'Format tanggal mulai harus YYYY-MM-DD.',
+            'date_to.date_format' => 'Format tanggal selesai harus YYYY-MM-DD.',
+            'date_to.after_or_equal' => 'Tanggal selesai harus sama atau setelah tanggal mulai.',
         ]);
 
         $dateFrom = $validated['date_from'] ?? null;
@@ -99,6 +111,21 @@ class AnalysisController extends Controller
             $resolvedSince = CarbonImmutable::createFromFormat('Y-m-d', $dateFrom, 'UTC')
                 ->startOfDay()
                 ->toIso8601String();
+        }
+
+        if (is_string($dateFrom) && $dateFrom !== '' && is_string($dateTo) && $dateTo !== '') {
+            $startDate = CarbonImmutable::createFromFormat('Y-m-d', $dateFrom, 'UTC')->startOfDay();
+            $endDate = CarbonImmutable::createFromFormat('Y-m-d', $dateTo, 'UTC')->endOfDay();
+            $rangeDays = $startDate->diffInDays($endDate) + 1;
+
+            if ($rangeDays > 366) {
+                return response()->json([
+                    'message' => 'Rentang tanggal maksimal 366 hari agar analisis tetap cepat dan stabil.',
+                    'errors' => [
+                        'date_to' => ['Rentang tanggal terlalu panjang. Silakan pilih maksimal 366 hari.'],
+                    ],
+                ], 422);
+            }
         }
 
         try {
@@ -151,12 +178,46 @@ class AnalysisController extends Controller
                 }
             }
         } catch (Throwable $exception) {
+            $responsePayload = [
+                'message' => $this->resolveAnalyzeGatewayMessage($exception),
+            ];
+
+            if ((bool) config('app.debug')) {
+                $responsePayload['detail'] = $exception->getMessage();
+            }
+
             return response()->json([
-                'message' => $exception->getMessage(),
+                ...$responsePayload,
             ], 502);
         }
 
         return response()->json($result);
+    }
+
+    private function resolveAnalyzeGatewayMessage(Throwable $exception): string
+    {
+        $normalizedMessage = strtolower(trim($exception->getMessage()));
+
+        if (
+            str_contains($normalizedMessage, 'failed to connect')
+            || str_contains($normalizedMessage, 'curl error 7')
+        ) {
+            return 'Service FinTrack belum aktif. Jalankan service FinTrack terlebih dahulu, lalu coba lagi.';
+        }
+
+        if (str_contains($normalizedMessage, 'fintrack_feed_base_url mengarah ke service ini sendiri')) {
+            return 'Konfigurasi FINTRACK_FEED_BASE_URL masih menunjuk ke FinLyzer. Arahkan ke host/port FinTrack yang benar.';
+        }
+
+        if (
+            str_contains($normalizedMessage, 'konfigurasi fintrack feed belum lengkap')
+            || str_contains($normalizedMessage, 'fintrack_feed_base_url')
+            || str_contains($normalizedMessage, 'fintrack_feed_api_key')
+        ) {
+            return 'Konfigurasi koneksi FinTrack belum lengkap. Periksa FINTRACK_FEED_BASE_URL dan FINTRACK_FEED_API_KEY.';
+        }
+
+        return 'Terjadi kendala saat mengambil data dari FinTrack. Silakan coba lagi beberapa saat lagi.';
     }
 
     public function latestForServiceC(Request $request): JsonResponse

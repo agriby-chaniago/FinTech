@@ -221,11 +221,89 @@
             padding: 0.6rem 0.66rem;
         }
 
+        .date-input-wrap {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.35rem;
+            align-items: center;
+        }
+
+        .date-input-lock {
+            cursor: pointer;
+        }
+
+        .date-picker-btn {
+            border: 1px solid rgba(99, 123, 255, 0.52);
+            border-radius: 10px;
+            background: rgba(59, 89, 221, 0.18);
+            color: var(--platinum);
+            padding: 0.56rem 0.62rem;
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: transform 120ms ease, filter 120ms ease;
+        }
+
+        .date-picker-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.08);
+        }
+
         .hint {
             margin-top: 0.4rem;
             color: rgba(221, 221, 229, 0.66);
             font-size: 0.76rem;
             line-height: 1.4;
+        }
+
+        .range-presets {
+            margin-top: 0.62rem;
+        }
+
+        .range-presets small {
+            display: block;
+            color: rgba(221, 221, 229, 0.72);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            margin-bottom: 0.3rem;
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.34rem;
+        }
+
+        .preset-btn {
+            border: 1px solid rgba(99, 123, 255, 0.42);
+            background: rgba(24, 24, 36, 0.92);
+            color: rgba(221, 221, 229, 0.86);
+            border-radius: 9px;
+            padding: 0.42rem 0.4rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            cursor: pointer;
+            transition: transform 120ms ease, border-color 120ms ease, color 120ms ease;
+        }
+
+        .preset-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(99, 123, 255, 0.68);
+            color: var(--platinum);
+        }
+
+        .preset-btn.active {
+            color: var(--byzantine-light);
+            border-color: rgba(99, 123, 255, 0.8);
+            background: rgba(59, 89, 221, 0.16);
+        }
+
+        .hint-strong {
+            color: rgba(221, 221, 229, 0.82);
         }
 
         .actions {
@@ -466,11 +544,29 @@
                         <div class="hint">Terisi otomatis dari hasil analisis user default yang diproses sistem.</div>
 
                         <label for="dateFrom">Tanggal Mulai</label>
-                        <input id="dateFrom" type="date">
+                        <div class="date-input-wrap">
+                            <input id="dateFrom" type="date" class="date-input-lock" autocomplete="off">
+                            <button id="openDateFromPickerBtn" type="button" class="date-picker-btn" aria-label="Buka kalender tanggal mulai">Kalender</button>
+                        </div>
 
                         <label for="dateTo">Tanggal Selesai</label>
-                        <input id="dateTo" type="date">
-                        <div class="hint">Kosongkan jika ingin mode otomatis tanpa batas rentang waktu.</div>
+                        <div class="date-input-wrap">
+                            <input id="dateTo" type="date" class="date-input-lock" autocomplete="off">
+                            <button id="openDateToPickerBtn" type="button" class="date-picker-btn" aria-label="Buka kalender tanggal selesai">Kalender</button>
+                        </div>
+                        <div class="hint">Pilih tanggal lewat kalender. Ketik manual untuk tanggal dinonaktifkan.</div>
+
+                        <div class="range-presets">
+                            <small>Pilih cepat rentang waktu</small>
+                            <div class="preset-grid">
+                                <button type="button" class="preset-btn" data-range-preset="7d">7 Hari</button>
+                                <button type="button" class="preset-btn" data-range-preset="30d">30 Hari</button>
+                                <button type="button" class="preset-btn" data-range-preset="90d">90 Hari</button>
+                                <button type="button" class="preset-btn" data-range-preset="thisMonth">Bulan Ini</button>
+                            </div>
+                        </div>
+
+                        <div id="rangeHint" class="hint hint-strong">Mode otomatis aktif (semua data).</div>
 
                         <div class="actions">
                             <button id="runAnalyzeBtn" type="button" class="btn btn-primary">Run Analyze</button>
@@ -553,10 +649,14 @@
     const usernameInput = document.getElementById('username');
     const dateFromInput = document.getElementById('dateFrom');
     const dateToInput = document.getElementById('dateTo');
+    const openDateFromPickerBtn = document.getElementById('openDateFromPickerBtn');
+    const openDateToPickerBtn = document.getElementById('openDateToPickerBtn');
+    const presetButtons = Array.from(document.querySelectorAll('[data-range-preset]'));
     const runAnalyzeBtn = document.getElementById('runAnalyzeBtn');
     const sendServiceCBtn = document.getElementById('sendServiceCBtn');
     const clearBtn = document.getElementById('clearBtn');
     const statusEl = document.getElementById('status');
+    const rangeHintEl = document.getElementById('rangeHint');
 
     const mIncome = document.getElementById('mIncome');
     const mExpense = document.getElementById('mExpense');
@@ -572,7 +672,176 @@
     const breakdownEl = document.getElementById('breakdown');
     const executedAtEl = document.getElementById('executedAt');
 
+    const MAX_RANGE_DAYS = 366;
     let latestPayload = null;
+
+    function pickerApiAvailable(input) {
+        return input && typeof input.showPicker === 'function';
+    }
+
+    function openNativePicker(input) {
+        if (pickerApiAvailable(input)) {
+            try {
+                input.showPicker();
+                return;
+            } catch (error) {
+                // Ignore and fallback to focus.
+            }
+        }
+
+        input.focus();
+    }
+
+    function enforceCalendarOnlyInput(input) {
+        if (!pickerApiAvailable(input)) {
+            return;
+        }
+
+        input.setAttribute('inputmode', 'none');
+
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Tab' || event.key === 'Escape') {
+                return;
+            }
+
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openNativePicker(input);
+                return;
+            }
+
+            event.preventDefault();
+        });
+
+        input.addEventListener('paste', (event) => event.preventDefault());
+        input.addEventListener('drop', (event) => event.preventDefault());
+        input.addEventListener('wheel', (event) => event.preventDefault(), { passive: false });
+        input.addEventListener('focus', () => openNativePicker(input));
+    }
+
+    function dateOnlyString(value) {
+        return new Date(value).toISOString().slice(0, 10);
+    }
+
+    function getTodayDateString() {
+        const now = new Date();
+        return dateOnlyString(now);
+    }
+
+    function calculateRangeDays(dateFrom, dateTo) {
+        if (!dateFrom || !dateTo) {
+            return null;
+        }
+
+        const start = new Date(dateFrom + 'T00:00:00Z');
+        const end = new Date(dateTo + 'T00:00:00Z');
+
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+            return null;
+        }
+
+        const diffMs = end.getTime() - start.getTime();
+        return Math.floor(diffMs / 86400000) + 1;
+    }
+
+    function formatRangeLabel(dateFrom, dateTo) {
+        if (dateFrom === '' && dateTo === '') {
+            return 'Semua data';
+        }
+
+        const resolvedFrom = dateFrom !== '' ? dateFrom : 'awal data';
+        const resolvedTo = dateTo !== '' ? dateTo : 'sekarang';
+        const rangeDays = calculateRangeDays(dateFrom, dateTo);
+
+        if (rangeDays !== null) {
+            return resolvedFrom + ' - ' + resolvedTo + ' (' + rangeDays + ' hari)';
+        }
+
+        return resolvedFrom + ' - ' + resolvedTo;
+    }
+
+    function syncDateConstraints() {
+        const today = getTodayDateString();
+        dateFromInput.max = today;
+        dateToInput.max = today;
+        dateToInput.min = dateFromInput.value || '';
+    }
+
+    function updatePresetActiveState(activePreset) {
+        presetButtons.forEach((button) => {
+            const isActive = button.dataset.rangePreset === activePreset;
+            button.classList.toggle('active', isActive);
+        });
+    }
+
+    function updateRangeHint() {
+        const dateFrom = String(dateFromInput.value || '').trim();
+        const dateTo = String(dateToInput.value || '').trim();
+
+        if (dateFrom === '' && dateTo === '') {
+            rangeHintEl.textContent = 'Mode otomatis aktif (semua data).';
+            updatePresetActiveState('');
+            return;
+        }
+
+        const rangeDays = calculateRangeDays(dateFrom, dateTo);
+
+        if (rangeDays !== null) {
+            rangeHintEl.textContent = 'Rentang aktif: ' + rangeDays + ' hari. Maksimal ' + MAX_RANGE_DAYS + ' hari.';
+        } else {
+            rangeHintEl.textContent = 'Rentang aktif sebagian. Sistem akan menggunakan batas tanggal yang diisi.';
+        }
+
+        updatePresetActiveState('');
+    }
+
+    function applyPresetRange(preset) {
+        const today = new Date();
+        const dateTo = dateOnlyString(today.toISOString());
+        let dateFrom = '';
+
+        if (preset === '7d') {
+            const from = new Date(today);
+            from.setUTCDate(from.getUTCDate() - 6);
+            dateFrom = dateOnlyString(from.toISOString());
+        }
+
+        if (preset === '30d') {
+            const from = new Date(today);
+            from.setUTCDate(from.getUTCDate() - 29);
+            dateFrom = dateOnlyString(from.toISOString());
+        }
+
+        if (preset === '90d') {
+            const from = new Date(today);
+            from.setUTCDate(from.getUTCDate() - 89);
+            dateFrom = dateOnlyString(from.toISOString());
+        }
+
+        if (preset === 'thisMonth') {
+            const from = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+            dateFrom = dateOnlyString(from.toISOString());
+        }
+
+        if (dateFrom !== '') {
+            dateFromInput.value = dateFrom;
+            dateToInput.value = dateTo;
+            syncDateConstraints();
+            updateRangeHint();
+            updatePresetActiveState(preset);
+        }
+    }
+
+    function normalizeErrorMessage(message) {
+        const raw = String(message || '').trim();
+        const lowered = raw.toLowerCase();
+
+        if (lowered.includes('failed to connect') || lowered.includes('cURL error 7'.toLowerCase())) {
+            return 'Service FinTrack belum aktif. Jalankan FinTrack dulu, lalu ulangi analisis.';
+        }
+
+        return raw !== '' ? raw : 'Terjadi kesalahan saat memproses permintaan.';
+    }
 
     function setStatus(message, type) {
         statusEl.className = 'status ' + type;
@@ -743,9 +1012,7 @@
         const analysis = result.analysis || null;
         const dateFrom = String(source.date_from || '').trim();
         const dateTo = String(source.date_to || '').trim();
-        const rangeLabel = dateFrom !== '' || dateTo !== ''
-            ? ((dateFrom !== '' ? dateFrom : 'awal data') + ' - ' + (dateTo !== '' ? dateTo : 'sekarang'))
-            : 'Semua data';
+        const rangeLabel = formatRangeLabel(dateFrom, dateTo);
 
         usernameInput.value = result.username;
         mFetched.textContent = String(Number(source.fetched_transactions || 0));
@@ -803,6 +1070,12 @@
             throw new Error('Tanggal selesai harus sama atau setelah tanggal mulai.');
         }
 
+        const rangeDays = calculateRangeDays(dateFrom, dateTo);
+
+        if (rangeDays !== null && rangeDays > MAX_RANGE_DAYS) {
+            throw new Error('Rentang maksimal ' + MAX_RANGE_DAYS + ' hari agar analisis tetap cepat dan stabil.');
+        }
+
         if (dateFrom !== '') {
             payload.date_from = dateFrom;
         }
@@ -827,7 +1100,7 @@
         }));
 
         if (!response.ok) {
-            throw new Error(String(data.message || ('Request gagal dengan status ' + response.status)));
+            throw new Error(normalizeErrorMessage(data.message || ('Request gagal dengan status ' + response.status)));
         }
 
         const source = data.source || {};
@@ -861,7 +1134,7 @@
                 setStatus('Analisis selesai dan berhasil ditampilkan.', 'ok');
             }
         } catch (error) {
-            setStatus(String(error.message || 'Gagal menjalankan analisis.'), 'error');
+            setStatus(normalizeErrorMessage(error.message || 'Gagal menjalankan analisis.'), 'error');
         } finally {
             setAnalyzeLoading(false);
         }
@@ -895,12 +1168,12 @@
             }));
 
             if (!response.ok) {
-                throw new Error(String(data.message || ('Request gagal dengan status ' + response.status)));
+                throw new Error(normalizeErrorMessage(data.message || ('Request gagal dengan status ' + response.status)));
             }
 
             setStatus('Hasil berhasil dikirim ke FinGoals.', 'ok');
         } catch (error) {
-            setStatus(String(error.message || 'Gagal mengirim hasil.'), 'error');
+            setStatus(normalizeErrorMessage(error.message || 'Gagal mengirim hasil.'), 'error');
         } finally {
             setSendLoading(false);
         }
@@ -909,14 +1182,46 @@
     function clearDashboard() {
         dateFromInput.value = '';
         dateToInput.value = '';
+        syncDateConstraints();
+        updateRangeHint();
         renderResult(null);
         setStatus('Dashboard direset.', 'info');
     }
+
+    dateFromInput.addEventListener('change', () => {
+        syncDateConstraints();
+
+        if (dateToInput.value !== '' && dateFromInput.value !== '' && dateToInput.value < dateFromInput.value) {
+            dateToInput.value = dateFromInput.value;
+        }
+
+        updateRangeHint();
+    });
+
+    dateToInput.addEventListener('change', updateRangeHint);
+
+    presetButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const preset = String(button.dataset.rangePreset || '');
+
+            if (preset !== '') {
+                applyPresetRange(preset);
+            }
+        });
+    });
+
+    openDateFromPickerBtn.addEventListener('click', () => openNativePicker(dateFromInput));
+    openDateToPickerBtn.addEventListener('click', () => openNativePicker(dateToInput));
+
+    enforceCalendarOnlyInput(dateFromInput);
+    enforceCalendarOnlyInput(dateToInput);
 
     runAnalyzeBtn.addEventListener('click', runAnalyze);
     sendServiceCBtn.addEventListener('click', sendToServiceC);
     clearBtn.addEventListener('click', clearDashboard);
 
+    syncDateConstraints();
+    updateRangeHint();
     renderResult(null);
 </script>
 </body>
