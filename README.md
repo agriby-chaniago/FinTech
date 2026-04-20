@@ -70,6 +70,11 @@ Lalu sesuaikan env berikut sebelum run harian:
 - Koneksi DB tiap service
 - Pair API key antar service (lihat section Sinkronkan API Key Antar Service)
 
+Catatan penting:
+
+- FinTrack sekarang tidak menyediakan login/register/password reset lokal.
+- Akses web FinTrack wajib melalui redirect OIDC Keycloak (`/auth/oidc/redirect`).
+
 ## Ringkasan Port
 
 - Keycloak: http://127.0.0.1:8080

@@ -84,3 +84,15 @@ Target:
 Evidence:
 
 - CI artifacts and local run logs.
+
+## Gate 8 - Strict Keycloak-Only Endpoints
+
+Target:
+
+- FinTrack tidak mengekspos endpoint auth lokal web/API.
+- Guest access ke halaman web yang dilindungi di FinTrack redirect ke `/auth/oidc/redirect`.
+- User-facing API FinTrack menolak request tanpa principal OIDC/session.
+
+Evidence:
+
+- Output route list dan hasil smoke test endpoint.

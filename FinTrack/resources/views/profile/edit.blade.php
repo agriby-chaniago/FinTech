@@ -9,12 +9,6 @@
 
             <div class="p-6 sm:p-8 bg-raisin2 shadow-md rounded-lg border border-raisin3 text-platinum">
 
-                @include('profile.partials.update-password-form')
-
-            </div>
-
-            <div class="p-6 sm:p-8 bg-raisin2 shadow-md rounded-lg border border-raisin3 text-platinum">
-
                 @include('profile.partials.delete-user-form')
 
             </div>

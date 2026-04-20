@@ -26,23 +26,8 @@
         </h2>
 
         <p class="text-sm text-platinum/70 mb-6 leading-snug">
-            {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
+            {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. This action cannot be undone.') }}
         </p>
-
-        <div>
-            <x-input-label for="password" value="{{ __('Password') }}" class="sr-only" />
-
-            <x-text-input
-                id="password"
-                name="password"
-                type="password"
-                class="w-full bg-raisin border border-gray-600 text-platinum placeholder-platinum/60 rounded py-2 px-3 focus:ring-2 focus:ring-byzantine focus:outline-none transition"
-                placeholder="{{ __('Password') }}"
-                autocomplete="current-password"
-            />
-
-            <x-input-error :messages="$errors->userDeletion->get('password')" class="mt-2 text-red-500" />
-        </div>
 
         <div class="mt-6 flex justify-end gap-4">
             <x-secondary-button

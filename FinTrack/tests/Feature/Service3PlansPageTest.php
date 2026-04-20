@@ -6,7 +6,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
 test('service3 plans page requires authentication', function () {
-    get('/service3/plans')->assertRedirect('/login');
+    get('/service3/plans')->assertRedirect('/auth/oidc/redirect');
 });
 
 test('service3 plans page shows only authenticated user records', function () {

@@ -3,6 +3,7 @@
 use App\Models\Service3PlanResult;
 use App\Models\User;
 use Illuminate\Support\Facades\Config;
+use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 
@@ -13,7 +14,8 @@ beforeEach(function () {
 });
 
 it('stores a new service3 plan result callback', function () {
-    $user = User::factory()->create();
+    /** @var User $user */
+    $user = User::factory()->createOne();
 
     $payload = [
         'user_id' => $user->id,
@@ -54,7 +56,8 @@ it('stores a new service3 plan result callback', function () {
 });
 
 it('updates existing callback record idempotently on retry', function () {
-    $user = User::factory()->create();
+    /** @var User $user */
+    $user = User::factory()->createOne();
 
     $payload = [
         'user_id' => $user->id,
@@ -92,7 +95,8 @@ it('updates existing callback record idempotently on retry', function () {
 });
 
 it('rejects callback with invalid service key', function () {
-    $user = User::factory()->create();
+    /** @var User $user */
+    $user = User::factory()->createOne();
 
     $payload = [
         'user_id' => $user->id,
@@ -123,8 +127,10 @@ it('rejects callback with invalid payload', function () {
 });
 
 it('allows user to fetch own service3 plan results', function () {
-    $user = User::factory()->create();
-    $token = $user->createToken('service3-read-token')->plainTextToken;
+    /** @var User $user */
+    $user = User::factory()->createOne();
+
+    actingAs($user);
 
     Service3PlanResult::create([
         'user_id' => $user->id,
@@ -141,9 +147,7 @@ it('allows user to fetch own service3 plan results', function () {
         'last_attempted_at' => now(),
     ]);
 
-    $response = getJson("/api/users/{$user->id}/service3/plans", [
-        'Authorization' => "Bearer {$token}",
-    ]);
+    $response = getJson("/api/users/{$user->id}/service3/plans");
 
     $response
         ->assertStatus(200)
@@ -154,8 +158,10 @@ it('allows user to fetch own service3 plan results', function () {
 });
 
 it('forbids user from fetching another user results', function () {
-    $owner = User::factory()->create();
-    $other = User::factory()->create();
+    /** @var User $owner */
+    $owner = User::factory()->createOne();
+    /** @var User $other */
+    $other = User::factory()->createOne();
 
     Service3PlanResult::create([
         'user_id' => $other->id,
@@ -170,19 +176,19 @@ it('forbids user from fetching another user results', function () {
         'last_attempted_at' => now(),
     ]);
 
-    $token = $owner->createToken('forbidden-read-token')->plainTextToken;
+    actingAs($owner);
 
-    getJson("/api/users/{$other->id}/service3/plans", [
-        'Authorization' => "Bearer {$token}",
-    ])
+    getJson("/api/users/{$other->id}/service3/plans")
         ->assertStatus(403)
         ->assertJsonPath('success', false)
         ->assertJsonPath('message', 'Forbidden.');
 });
 
 it('returns latest service3 plan result', function () {
-    $user = User::factory()->create();
-    $token = $user->createToken('latest-read-token')->plainTextToken;
+    /** @var User $user */
+    $user = User::factory()->createOne();
+
+    actingAs($user);
 
     Service3PlanResult::create([
         'user_id' => $user->id,
@@ -212,9 +218,7 @@ it('returns latest service3 plan result', function () {
         'last_attempted_at' => now(),
     ]);
 
-    getJson("/api/users/{$user->id}/service3/plans/latest", [
-        'Authorization' => "Bearer {$token}",
-    ])
+    getJson("/api/users/{$user->id}/service3/plans/latest")
         ->assertStatus(200)
         ->assertJsonPath('success', true)
         ->assertJsonPath('data.correlation_id', 'corr-latest-002')

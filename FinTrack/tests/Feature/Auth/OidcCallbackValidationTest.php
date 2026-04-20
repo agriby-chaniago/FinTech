@@ -55,7 +55,7 @@ class OidcCallbackValidationTest extends TestCase
             ->get('/auth/oidc/callback?state=state-1&code=valid-code');
 
         $response
-            ->assertRedirect('/login')
+            ->assertRedirect('/')
             ->assertSessionHasErrors('oidc');
     }
 
@@ -92,7 +92,7 @@ class OidcCallbackValidationTest extends TestCase
             ->get('/auth/oidc/callback?state=state-2&code=valid-code');
 
         $response
-            ->assertRedirect('/login')
+            ->assertRedirect('/')
             ->assertSessionHasErrors('oidc');
     }
 
@@ -125,7 +125,7 @@ class OidcCallbackValidationTest extends TestCase
             ->get('/auth/oidc/callback?state=state-3a&code=valid-code');
 
         $first
-            ->assertRedirect('/login')
+            ->assertRedirect('/')
             ->assertSessionHasErrors('oidc');
 
         $second = $this
@@ -136,7 +136,7 @@ class OidcCallbackValidationTest extends TestCase
             ->get('/auth/oidc/callback?state=state-3b&code=valid-code');
 
         $second
-            ->assertRedirect('/login')
+            ->assertRedirect('/')
             ->assertSessionHasErrors('oidc');
 
         $userinfoCalls = collect(Http::recorded())

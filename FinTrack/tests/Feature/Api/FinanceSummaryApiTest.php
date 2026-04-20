@@ -4,6 +4,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
+use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
 
 beforeEach(function () {
@@ -16,8 +17,10 @@ beforeEach(function () {
 });
 
 it('generates finance summary through internal analyzer and planner endpoints', function () {
-    $user = User::factory()->create();
-    $token = $user->createToken('finance-summary-token')->plainTextToken;
+    /** @var User $user */
+    $user = User::factory()->createOne();
+
+    actingAs($user);
 
     Transaction::create([
         'user_id' => $user->id,
@@ -62,7 +65,6 @@ it('generates finance summary through internal analyzer and planner endpoints', 
     ]);
 
     $response = getJson('/api/finance/summary?saving_percentage=30', [
-        'Authorization' => "Bearer {$token}",
         'x-api-key' => 'gateway-secret',
     ]);
 
@@ -112,11 +114,12 @@ it('generates finance summary through internal analyzer and planner endpoints', 
 });
 
 it('requires valid service api key on finance summary route', function () {
-    $user = User::factory()->create();
-    $token = $user->createToken('finance-summary-token')->plainTextToken;
+    /** @var User $user */
+    $user = User::factory()->createOne();
+
+    actingAs($user);
 
     getJson('/api/finance/summary', [
-        'Authorization' => "Bearer {$token}",
         'x-api-key' => 'wrong-key',
     ])
         ->assertStatus(401)
