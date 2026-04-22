@@ -34,9 +34,9 @@ class PlannerPageController extends Controller
                 ->limit(8)
                 ->get();
 
-            $analysisResult = $this->serviceBLatestAnalysisService->fetchLatest([
-                'access_token' => $this->resolveAccessToken($request),
-            ]);
+            $analysisResult = $this->serviceBLatestAnalysisService->fetchLatest(
+                $this->buildAnalyzerContext($request, $authenticatedUser)
+            );
 
             if (($analysisResult['ok'] ?? false) === true && is_array($analysisResult['data'] ?? null)) {
                 $analysisSnapshot = $this->normalizeAnalysisSnapshot($analysisResult['data']);
@@ -63,9 +63,9 @@ class PlannerPageController extends Controller
             return redirect()->route('oidc.redirect');
         }
 
-        $analysisResult = $this->serviceBLatestAnalysisService->fetchLatest([
-            'access_token' => $this->resolveAccessToken($request),
-        ]);
+        $analysisResult = $this->serviceBLatestAnalysisService->fetchLatest(
+            $this->buildAnalyzerContext($request, $authenticatedUser)
+        );
 
         if (($analysisResult['ok'] ?? false) !== true || ! is_array($analysisResult['data'] ?? null)) {
             return redirect()
@@ -102,6 +102,19 @@ class PlannerPageController extends Controller
     private function resolveAccessToken(Request $request): string
     {
         return trim((string) data_get($request->session()->get('oidc_tokens', []), 'access_token', ''));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildAnalyzerContext(Request $request, User $authenticatedUser): array
+    {
+        return [
+            'access_token' => $this->resolveAccessToken($request),
+            'user_id' => (int) $authenticatedUser->id,
+            'user_email' => strtolower(trim((string) $authenticatedUser->email)),
+            'keycloak_sub' => trim((string) $authenticatedUser->keycloak_sub),
+        ];
     }
 
     private function authenticatedUser(): ?User

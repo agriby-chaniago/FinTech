@@ -580,6 +580,62 @@
 		return resolvedFrom + ' - ' + resolvedTo;
 	}
 
+	function resolveMetrics(result) {
+		if (typeof result === 'object' && result !== null && typeof result.metrics === 'object' && result.metrics !== null) {
+			return result.metrics;
+		}
+
+		if (typeof result === 'object' && result !== null && typeof result.analysis === 'object' && result.analysis !== null) {
+			return result.analysis;
+		}
+
+		return {};
+	}
+
+	function resolveBreakdownItems(result, metrics) {
+		if (typeof result === 'object' && result !== null && Array.isArray(result.category_breakdown)) {
+			return result.category_breakdown;
+		}
+
+		const breakdownMap = (typeof metrics === 'object' && metrics !== null && typeof metrics.category_breakdown === 'object' && metrics.category_breakdown !== null)
+			? metrics.category_breakdown
+			: null;
+
+		if (!breakdownMap) {
+			return [];
+		}
+
+		const totalExpense = asNumber((typeof metrics === 'object' && metrics !== null) ? metrics.total_expense : 0, 0);
+
+		return Object.entries(breakdownMap)
+			.map(([category, percentageRaw]) => {
+				const percentage = asNumber(percentageRaw, 0);
+				const amount = totalExpense > 0 ? (totalExpense * percentage) / 100 : 0;
+
+				return {
+					category,
+					amount,
+					percentage,
+				};
+			});
+	}
+
+	function resolveInsight(result, metrics) {
+		if (typeof result === 'object' && result !== null && typeof result.ai_insight === 'string') {
+			return result.ai_insight;
+		}
+
+		if (typeof result === 'object' && result !== null && typeof result.ai_insight === 'object' && result.ai_insight !== null) {
+			return String(result.ai_insight.text || '').trim();
+		}
+
+		if (typeof metrics === 'object' && metrics !== null && typeof metrics.insight === 'string') {
+			return metrics.insight;
+		}
+
+		return '';
+	}
+
 	function setStatus(type, message) {
 		statusEl.classList.remove('info', 'ok', 'error');
 		statusEl.classList.add(type);
@@ -640,11 +696,15 @@
 		breakdownEl.innerHTML = items
 			.map((item) => {
 				const category = String(item?.category || 'uncategorized');
-				const amount = asNumber(item?.amount);
+				const amountRaw = item?.amount;
+				const amount = asNumber(amountRaw, NaN);
 				const percentage = Math.max(0, Math.min(100, asNumber(item?.percentage)));
+				const amountLabel = Number.isFinite(amount)
+					? category + ' (' + formatCurrency(amount) + ')'
+					: category;
 
 				return '<div class="bar-item">'
-					+ '<div class="bar-head"><span>' + category + ' (' + formatCurrency(amount) + ')</span><span>' + percentage.toFixed(2) + '%</span></div>'
+					+ '<div class="bar-head"><span>' + amountLabel + '</span><span>' + percentage.toFixed(2) + '%</span></div>'
 					+ '<div class="bar-track"><div class="bar-fill" style="width:' + percentage.toFixed(2) + '%"></div></div>'
 					+ '</div>';
 			})
@@ -653,15 +713,14 @@
 
 	function buildServiceCPayload(result) {
 		const source = (typeof result.source === 'object' && result.source !== null) ? result.source : {};
-		const metrics = (typeof result.metrics === 'object' && result.metrics !== null) ? result.metrics : {};
-		const aiInsight = result.ai_insight;
+		const metrics = resolveMetrics(result);
+		const aiInsight = resolveInsight(result, metrics);
+		const breakdownItems = resolveBreakdownItems(result, metrics);
 
 		let insightTextValue = '';
 
 		if (typeof aiInsight === 'string') {
 			insightTextValue = aiInsight.trim();
-		} else if (typeof aiInsight === 'object' && aiInsight !== null) {
-			insightTextValue = String(aiInsight.text || '').trim();
 		}
 
 		if (insightTextValue === '') {
@@ -672,6 +731,8 @@
 			message: String(result.message || 'Analisis dari FinLyzer.'),
 			source_sync: {
 				user_id: source.user_id,
+				user_email: String(source.user_email || '').trim(),
+				keycloak_sub: String(source.user_keycloak_sub || '').trim(),
 				fetched_transactions: asNumber(source.fetched_transactions, asNumber(metrics.transaction_count)),
 				next_since: source.next_since || null,
 			},
@@ -684,14 +745,16 @@
 				financial_health: String(metrics.financial_health || ''),
 				summary: String(metrics.summary || ''),
 			},
-			category_breakdown: Array.isArray(result.category_breakdown) ? result.category_breakdown : [],
+			category_breakdown: breakdownItems,
 			ai_insight: insightTextValue,
 		};
 	}
 
 	function renderResult(result) {
 		const source = (typeof result.source === 'object' && result.source !== null) ? result.source : {};
-		const metrics = (typeof result.metrics === 'object' && result.metrics !== null) ? result.metrics : {};
+		const metrics = resolveMetrics(result);
+		const breakdownItems = resolveBreakdownItems(result, metrics);
+		const resolvedInsight = resolveInsight(result, metrics);
 
 		const income = asNumber(metrics.total_income);
 		const expense = asNumber(metrics.total_expense);
@@ -714,16 +777,16 @@
 
 		summaryText.textContent = String(metrics.summary || 'Belum ada ringkasan.');
 
-		if (typeof result.ai_insight === 'string') {
-			insightText.textContent = result.ai_insight;
-		} else if (typeof result.ai_insight === 'object' && result.ai_insight !== null) {
-			insightText.textContent = String(result.ai_insight.text || 'Belum ada insight.');
+		if (resolvedInsight !== '') {
+			insightText.textContent = resolvedInsight;
 		} else {
 			insightText.textContent = 'Belum ada insight.';
 		}
 
-		renderBreakdown(Array.isArray(result.category_breakdown) ? result.category_breakdown : []);
-		executedAtEl.textContent = formatDateTime(result.executed_at || source.executed_at || '');
+		renderBreakdown(breakdownItems);
+
+		const executedAt = String(result.executed_at || source.executed_at || '').trim();
+		executedAtEl.textContent = formatDateTime(executedAt !== '' ? executedAt : new Date().toISOString());
 
 		if (source.user_name) {
 			usernameInput.value = String(source.user_name);
@@ -785,7 +848,7 @@
 			}
 
 			renderResult(responseBody);
-			setStatus('ok', 'Analisis berhasil dijalankan.');
+			setStatus('ok', String(responseBody.message || 'Analisis berhasil dijalankan.'));
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat analisis.';
 			setStatus('error', message);

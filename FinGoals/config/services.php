@@ -55,6 +55,9 @@ return [
     'service_b_analyzer' => [
         'base_url' => env('SERVICE_B_ANALYZER_BASE_URL', 'http://127.0.0.1:8002'),
         'latest_path' => env('SERVICE_B_ANALYZER_LATEST_PATH', '/api/user/analyze/auto/latest'),
+        'internal_latest_path' => env('SERVICE_B_ANALYZER_INTERNAL_LATEST_PATH', '/api/internal/analyze/auto/latest'),
+        'api_key' => env('SERVICE_B_ANALYZER_API_KEY', ''),
+        'api_key_header' => env('SERVICE_B_ANALYZER_API_KEY_HEADER', 'x-api-key'),
         'timeout' => (int) env('SERVICE_B_ANALYZER_TIMEOUT', 10),
     ],
 

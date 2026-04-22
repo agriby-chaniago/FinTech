@@ -188,4 +188,39 @@ class UserApiContractTest extends TestCase
             'top_category' => 'food',
         ]);
     }
+
+    public function test_internal_plan_endpoint_prefers_identity_hint_when_user_id_mismatches(): void
+    {
+        config([
+            'services.investment_planner.api_key' => 'planner-secret',
+            'services.groq.api_key' => '',
+        ]);
+
+        $targetUser = User::factory()->create([
+            'email' => 'planner-hint@example.com',
+            'keycloak_sub' => 'kc-planner-hint',
+        ]);
+
+        $otherUser = User::factory()->create();
+
+        $response = $this
+            ->withHeaders(['x-api-key' => 'planner-secret'])
+            ->postJson('/api/internal/plan', [
+                'user_id' => $otherUser->id,
+                'user_email' => $targetUser->email,
+                'keycloak_sub' => $targetUser->keycloak_sub,
+                'total_income' => 7200000,
+                'total_expense' => 3200000,
+                'top_category' => 'transport',
+                'insight' => 'Surplus stabil',
+            ]);
+
+        $response->assertCreated();
+
+        $this->assertDatabaseHas('financial_plans', [
+            'user_id' => $targetUser->id,
+            'total_income' => 7200000,
+            'top_category' => 'transport',
+        ]);
+    }
 }

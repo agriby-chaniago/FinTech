@@ -117,6 +117,10 @@ class AnalysisController extends Controller
             if (is_array($result['source'] ?? null) && is_string($resolvedName) && $resolvedName !== '') {
                 $result['source']['user_name'] = $resolvedName;
             }
+
+            if (is_array($result['source'] ?? null) && is_string($resolvedKeycloakSub) && $resolvedKeycloakSub !== '') {
+                $result['source']['user_keycloak_sub'] = $resolvedKeycloakSub;
+            }
         } catch (Throwable $exception) {
             $responsePayload = [
                 'message' => $this->resolveAnalyzeGatewayMessage($exception),
@@ -215,6 +219,12 @@ class AnalysisController extends Controller
                     if ($resolvedUser instanceof User) {
                         $resolvedEmail = strtolower(trim((string) $resolvedUser->email));
                         $resolvedName = trim((string) $resolvedUser->name);
+
+                        $keycloakSub = trim((string) $resolvedUser->keycloak_sub);
+
+                        if ($keycloakSub !== '') {
+                            $resolvedKeycloakSub = $keycloakSub;
+                        }
                     }
                 }
             }
@@ -225,6 +235,10 @@ class AnalysisController extends Controller
 
             if (is_array($result['source'] ?? null) && is_string($resolvedName) && $resolvedName !== '') {
                 $result['source']['user_name'] = $resolvedName;
+            }
+
+            if (is_array($result['source'] ?? null) && is_string($resolvedKeycloakSub) && $resolvedKeycloakSub !== '') {
+                $result['source']['user_keycloak_sub'] = $resolvedKeycloakSub;
             }
 
             if (is_array($result['source'] ?? null)) {
@@ -314,6 +328,8 @@ class AnalysisController extends Controller
     {
         $validated = $request->validate([
             'user_id' => ['nullable', 'integer', 'min:1'],
+            'user_email' => ['nullable', 'string', 'email:rfc', 'max:255'],
+            'keycloak_sub' => ['nullable', 'string', 'max:255'],
         ]);
 
         $query = AnalysisReport::query()
@@ -324,6 +340,8 @@ class AnalysisController extends Controller
             ->orderByDesc('id');
 
         $userId = $validated['user_id'] ?? null;
+        $userEmail = strtolower(trim((string) ($validated['user_email'] ?? '')));
+        $keycloakSub = trim((string) ($validated['keycloak_sub'] ?? ''));
 
         $authenticatedUserId = Auth::id();
 
@@ -335,8 +353,40 @@ class AnalysisController extends Controller
             }
 
             $query->where('user_id', (int) $authenticatedUserId);
-        } elseif (is_numeric($userId)) {
-            $query->where('user_id', (int) $userId);
+        } else {
+            $resolvedUserId = null;
+
+            if ($keycloakSub !== '') {
+                $resolvedUserBySub = User::query()
+                    ->where('keycloak_sub', $keycloakSub)
+                    ->first();
+
+                if ($resolvedUserBySub instanceof User) {
+                    $resolvedUserId = (int) $resolvedUserBySub->id;
+                }
+            }
+
+            if (! is_numeric($resolvedUserId) && $userEmail !== '') {
+                $resolvedUserByEmail = User::query()
+                    ->whereRaw('LOWER(email) = ?', [$userEmail])
+                    ->first();
+
+                if ($resolvedUserByEmail instanceof User) {
+                    $resolvedUserId = (int) $resolvedUserByEmail->id;
+                }
+            }
+
+            if (! is_numeric($resolvedUserId) && is_numeric($userId)) {
+                $resolvedUserId = (int) $userId;
+            }
+
+            if (! is_numeric($resolvedUserId)) {
+                return response()->json([
+                    'message' => 'Parameter user tidak lengkap. Sertakan user_id, user_email, atau keycloak_sub.',
+                ], 422);
+            }
+
+            $query->where('user_id', (int) $resolvedUserId);
         }
 
         $report = $query->first();
@@ -412,6 +462,8 @@ class AnalysisController extends Controller
         $totalExpense = data_get($payload, 'metrics.total_expense');
         $topCategory = trim((string) data_get($payload, 'metrics.top_category', ''));
         $savingsRate = data_get($payload, 'metrics.savings_rate');
+        $userEmail = strtolower(trim((string) data_get($payload, 'source_sync.user_email', data_get($payload, 'source.user_email', ''))));
+        $keycloakSub = trim((string) data_get($payload, 'source_sync.keycloak_sub', data_get($payload, 'source.user_keycloak_sub', '')));
 
         if (! is_numeric($userId) || (int) $userId <= 0) {
             return response()->json([
@@ -446,6 +498,14 @@ class AnalysisController extends Controller
             'top_category' => $topCategory,
             'insight' => $insight,
         ];
+
+        if ($userEmail !== '' && filter_var($userEmail, FILTER_VALIDATE_EMAIL)) {
+            $plannerPayload['user_email'] = $userEmail;
+        }
+
+        if ($keycloakSub !== '') {
+            $plannerPayload['keycloak_sub'] = $keycloakSub;
+        }
 
         if (is_numeric($savingsRate)) {
             $normalizedSavingsRate = (float) $savingsRate;

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -15,8 +16,17 @@ class ServiceBLatestAnalysisService
     {
         $baseUrl = trim((string) config('services.service_b_analyzer.base_url', ''));
         $latestPath = trim((string) config('services.service_b_analyzer.latest_path', '/api/user/analyze/auto/latest'));
+        $internalLatestPath = trim((string) config('services.service_b_analyzer.internal_latest_path', '/api/internal/analyze/auto/latest'));
+        $apiKey = trim((string) config('services.service_b_analyzer.api_key', ''));
+        $apiKeyHeader = trim((string) config('services.service_b_analyzer.api_key_header', 'x-api-key'));
         $timeout = (int) config('services.service_b_analyzer.timeout', 10);
         $accessToken = trim((string) data_get($context, 'access_token', ''));
+
+        $userId = is_numeric(data_get($context, 'user_id'))
+            ? (int) data_get($context, 'user_id')
+            : null;
+        $userEmail = strtolower(trim((string) data_get($context, 'user_email', '')));
+        $keycloakSub = trim((string) data_get($context, 'keycloak_sub', ''));
 
         if ($baseUrl === '') {
             return [
@@ -25,20 +35,74 @@ class ServiceBLatestAnalysisService
             ];
         }
 
-        if ($accessToken === '') {
+        $query = [];
+
+        if (is_int($userId) && $userId > 0) {
+            $query['user_id'] = $userId;
+        }
+
+        if ($userEmail !== '' && filter_var($userEmail, FILTER_VALIDATE_EMAIL)) {
+            $query['user_email'] = $userEmail;
+        }
+
+        if ($keycloakSub !== '') {
+            $query['keycloak_sub'] = $keycloakSub;
+        }
+
+        $userScopedUrl = rtrim($baseUrl, '/').'/'.ltrim($latestPath, '/');
+
+        $bearerResponse = null;
+
+        if ($accessToken !== '') {
+            try {
+                $bearerResponse = Http::acceptJson()
+                    ->withToken($accessToken)
+                    ->timeout($timeout)
+                    ->get($userScopedUrl, $query);
+            } catch (Throwable) {
+                $bearerResponse = null;
+            }
+
+            if ($bearerResponse instanceof Response && $bearerResponse->successful()) {
+                return $this->normalizeLatestPayload($bearerResponse);
+            }
+
+            // Keep the original upstream error when bearer fails for reasons other than token/auth.
+            if ($bearerResponse instanceof Response && $bearerResponse->status() !== 401) {
+                return [
+                    'ok' => false,
+                    'message' => $this->resolveErrorMessage(
+                        $bearerResponse,
+                        'Data analisis terbaru dari Service B belum tersedia.'
+                    ),
+                ];
+            }
+        }
+
+        if ($apiKey === '') {
+            if ($accessToken === '') {
+                return [
+                    'ok' => false,
+                    'message' => 'Sesi login tidak valid. Silakan login ulang lewat Keycloak.',
+                ];
+            }
+
             return [
                 'ok' => false,
-                'message' => 'Sesi login tidak valid. Silakan login ulang lewat Keycloak.',
+                'message' => 'Token OIDC tidak valid dan API key Service B belum dikonfigurasi.',
             ];
         }
 
-        $url = rtrim($baseUrl, '/').'/'.ltrim($latestPath, '/');
+        $internalUrl = rtrim($baseUrl, '/').'/'.ltrim($internalLatestPath, '/');
 
         try {
             $response = Http::acceptJson()
-                ->withToken($accessToken)
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    $apiKeyHeader => $apiKey,
+                ])
                 ->timeout($timeout)
-                ->get($url);
+                ->get($internalUrl, $query);
         } catch (Throwable $exception) {
             return [
                 'ok' => false,
@@ -47,15 +111,20 @@ class ServiceBLatestAnalysisService
         }
 
         if (! $response->successful()) {
-            $responseMessage = trim((string) data_get($response->json(), 'message', ''));
-
             return [
                 'ok' => false,
-                'message' => $responseMessage !== ''
-                    ? $responseMessage
-                    : 'Data analisis terbaru dari Service B belum tersedia.',
+                'message' => $this->resolveErrorMessage(
+                    $response,
+                    'Data analisis terbaru dari Service B belum tersedia.'
+                ),
             ];
         }
+
+        return $this->normalizeLatestPayload($response);
+    }
+
+    private function normalizeLatestPayload(Response $response): array
+    {
 
         $payload = $response->json();
         $data = data_get($payload, 'data');
@@ -72,6 +141,17 @@ class ServiceBLatestAnalysisService
             'message' => 'OK',
             'data' => $data,
         ];
+    }
+
+    private function resolveErrorMessage(Response $response, string $defaultMessage): string
+    {
+        $responseMessage = trim((string) data_get($response->json(), 'message', ''));
+
+        if ($responseMessage !== '') {
+            return $responseMessage;
+        }
+
+        return $defaultMessage;
     }
 
     /**

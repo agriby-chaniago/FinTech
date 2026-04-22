@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\FinancialPlanningService;
 use App\Services\Service3CallbackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class PlanController extends Controller
 {
@@ -20,6 +22,8 @@ class PlanController extends Controller
     {
         $validated = $request->validate([
             'user_id' => $this->userIdRules(),
+            'user_email' => ['nullable', 'string', 'email:rfc', 'max:255'],
+            'keycloak_sub' => ['nullable', 'string', 'max:255'],
             'total_income' => ['required', 'integer', 'min:0'],
             'total_expense' => ['required', 'integer', 'min:0'],
             'top_category' => ['required', 'string', 'max:255'],
@@ -51,7 +55,7 @@ class PlanController extends Controller
     {
         $requiredRule = Auth::check() ? 'nullable' : 'required';
 
-        return [$requiredRule, 'integer', 'exists:users,id'];
+        return [$requiredRule, 'integer', 'min:1'];
     }
 
     private function resolveUserId(Request $request, mixed $requestedUserId): int
@@ -68,13 +72,52 @@ class PlanController extends Controller
             return $resolvedUserId;
         }
 
-        if (! is_numeric($requestedUserId)) {
-            $request->validate([
-                'user_id' => ['required', 'integer', 'exists:users,id'],
-            ]);
+        $resolvedHintUser = $this->resolveHintUser(
+            trim((string) $request->input('keycloak_sub', '')),
+            strtolower(trim((string) $request->input('user_email', '')))
+        );
+
+        if ($resolvedHintUser instanceof User) {
+            return (int) $resolvedHintUser->id;
         }
 
-        return (int) $requestedUserId;
+        if (is_numeric($requestedUserId)) {
+            $resolvedRequestedUser = User::query()->find((int) $requestedUserId);
+
+            if ($resolvedRequestedUser instanceof User) {
+                return (int) $resolvedRequestedUser->id;
+            }
+        }
+
+        throw ValidationException::withMessages([
+            'user_id' => ['user_id tidak ditemukan di Service C. Sertakan user_email atau keycloak_sub yang valid.'],
+        ]);
+
+    }
+
+    private function resolveHintUser(string $keycloakSub, string $userEmail): ?User
+    {
+        if ($keycloakSub !== '') {
+            $resolvedBySub = User::query()
+                ->where('keycloak_sub', $keycloakSub)
+                ->first();
+
+            if ($resolvedBySub instanceof User) {
+                return $resolvedBySub;
+            }
+        }
+
+        if ($userEmail !== '') {
+            $resolvedByEmail = User::query()
+                ->whereRaw('LOWER(email) = ?', [$userEmail])
+                ->first();
+
+            if ($resolvedByEmail instanceof User) {
+                return $resolvedByEmail;
+            }
+        }
+
+        return null;
     }
 
     private function isInternalPlannerRequest(Request $request): bool
