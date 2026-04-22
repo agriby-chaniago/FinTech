@@ -207,6 +207,47 @@ class AnalyzeApiTest extends TestCase
             ]);
     }
 
+    public function test_analyze_auto_returns_actionable_message_when_fintrack_user_is_missing(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'auto-missing-user@example.com',
+            'keycloak_sub' => 'kc-lyzer-missing-user',
+        ]);
+
+        config([
+            'services.analyzer.api_key' => 'my-secret-key',
+            'services.groq.api_key' => '',
+            'services.fintrack_feed.base_url' => 'http://fintrack.local',
+            'services.fintrack_feed.path' => '/api/service2/users/{user_id}/transactions-feed',
+            'services.fintrack_feed.api_key' => 'fintrack1',
+            'services.fintrack_feed.api_key_header' => 'x-api-key',
+        ]);
+
+        Http::fake([
+            'http://fintrack.local/*' => Http::response([
+                'message' => 'No query results for model [App\\Models\\User] 999999',
+            ], 404),
+        ]);
+
+        $response = $this
+            ->withHeaders(['x-api-key' => 'my-secret-key'])
+            ->postJson('/api/analyze/auto', [
+                'email' => $user->email,
+            ]);
+
+        $response
+            ->assertStatus(502)
+            ->assertJson([
+                'message' => 'Akun belum tersedia di FinTrack. Login ke FinTrack sekali agar akun tersinkron, lalu coba lagi.',
+            ]);
+
+        Http::assertSent(function ($request) use ($user) {
+            return str_contains((string) $request->url(), '/users/'.$user->id.'/transactions-feed')
+                && str_contains((string) $request->url(), 'keycloak_sub=kc-lyzer-missing-user')
+                && str_contains((string) $request->url(), 'email=auto-missing-user%40example.com');
+        });
+    }
+
     public function test_analyze_auto_uses_default_user_and_saved_since_token(): void
     {
         $user = User::factory()->create([

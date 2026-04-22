@@ -19,7 +19,9 @@ class FintrackFeedService
         ?string $since = null,
         bool $includeSummary = false,
         ?string $dateFrom = null,
-        ?string $dateTo = null
+        ?string $dateTo = null,
+        ?string $keycloakSub = null,
+        ?string $email = null
     ): array
     {
         $baseUrl = trim((string) config('services.fintrack_feed.base_url'));
@@ -53,6 +55,14 @@ class FintrackFeedService
             $query['date_to'] = $dateTo;
         }
 
+        if ($keycloakSub !== null && trim($keycloakSub) !== '') {
+            $query['keycloak_sub'] = trim($keycloakSub);
+        }
+
+        if ($email !== null && trim($email) !== '') {
+            $query['email'] = strtolower(trim($email));
+        }
+
         if (! $includeSummary) {
             $query['include_summary'] = 0;
         }
@@ -67,13 +77,26 @@ class FintrackFeedService
             ->get($url, $query);
 
         if ($response->failed()) {
+            $status = $response->status();
+            $upstreamMessage = $this->extractUpstreamMessage($response->json(), $response->body());
+
             Log::warning('FinTrack feed request failed.', [
-                'status' => $response->status(),
+                'status' => $status,
                 'url' => $url,
                 'response_body' => mb_substr($response->body(), 0, 600),
+                'upstream_message' => $upstreamMessage,
             ]);
 
-            throw new RuntimeException('Gagal mengambil transaksi dari FinTrack feed.');
+            $contextParts = [sprintf('status:%d', $status)];
+
+            if ($upstreamMessage !== '') {
+                $contextParts[] = 'upstream:'.$upstreamMessage;
+            }
+
+            throw new RuntimeException(sprintf(
+                'Gagal mengambil transaksi dari FinTrack feed. [%s]',
+                implode('] [', $contextParts)
+            ));
         }
 
         $payload = $response->json();
@@ -208,6 +231,39 @@ class FintrackFeedService
         if ($basePort === $appPort) {
             throw new RuntimeException('FINTRACK_FEED_BASE_URL mengarah ke service ini sendiri. Gunakan host/port Service 1 yang berbeda.');
         }
+    }
+
+    private function extractUpstreamMessage(mixed $payload, string $body): string
+    {
+        if (is_array($payload)) {
+            $candidates = [
+                data_get($payload, 'message'),
+                data_get($payload, 'error'),
+                data_get($payload, 'detail'),
+            ];
+
+            foreach ($candidates as $candidate) {
+                if (! is_string($candidate) || trim($candidate) === '') {
+                    continue;
+                }
+
+                return preg_replace('/\s+/', ' ', trim($candidate)) ?? '';
+            }
+        }
+
+        $trimmedBody = trim($body);
+
+        if ($trimmedBody === '') {
+            return '';
+        }
+
+        $singleLineBody = preg_replace('/\s+/', ' ', $trimmedBody);
+
+        if (! is_string($singleLineBody) || $singleLineBody === '') {
+            return '';
+        }
+
+        return mb_substr($singleLineBody, 0, 180);
     }
 
     /**

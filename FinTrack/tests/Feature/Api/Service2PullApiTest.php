@@ -171,6 +171,38 @@ it('returns bad request when since is invalid', function () {
         ->assertJsonPath('message', 'Invalid request parameters.');
 });
 
+it('falls back to keycloak_sub when requested user_id is missing', function () {
+    $user = User::factory()->create([
+        'email' => 'track-fallback@example.com',
+        'keycloak_sub' => 'kc-track-fallback',
+    ]);
+
+    Transaction::create([
+        'user_id' => $user->id,
+        'amount' => 10000,
+        'description' => 'Tes fallback keycloak_sub',
+        'category' => 'makan',
+        'type' => 'expense',
+        'transaction_date' => '2026-04-13',
+        'tanggal' => '2026-04-13',
+        'kategori' => 'pengeluaran',
+        'deskripsi' => 'Tes fallback keycloak_sub',
+        'nominal' => 10000,
+    ]);
+
+    $response = getJson(
+        '/api/service2/users/999999/transactions-feed?keycloak_sub=kc-track-fallback',
+        ['x-api-key' => 'service2-secret']
+    );
+
+    $response
+        ->assertStatus(200)
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('meta.user_id', $user->id)
+        ->assertJsonPath('meta.requested_user_id', 999999)
+        ->assertJsonPath('meta.total_items', 1);
+});
+
 it('returns not found when user does not exist', function () {
     $response = getJson(
         '/api/service2/users/999999/transactions-feed',

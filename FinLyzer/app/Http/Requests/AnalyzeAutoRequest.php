@@ -24,7 +24,8 @@ class AnalyzeAutoRequest extends FormRequest
      */
     public function rules(): array
     {
-        $emailRule = Auth::check() ? 'nullable' : 'required';
+        $defaultUserId = (int) config('services.fintrack_feed.default_user_id', 0);
+        $emailRule = (Auth::check() || $defaultUserId > 0) ? 'nullable' : 'required';
 
         return [
             'email' => [$emailRule, 'string', 'email:rfc', 'max:255'],
@@ -63,6 +64,12 @@ class AnalyzeAutoRequest extends FormRequest
         $requestedEmail = $this->normalizeEmail($this->validated('email'));
 
         if ($requestedEmail === '') {
+            $defaultUserId = (int) config('services.fintrack_feed.default_user_id', 0);
+
+            if ($defaultUserId > 0) {
+                return $defaultUserId;
+            }
+
             throw new AuthorizationException('email wajib diisi.');
         }
 

@@ -38,20 +38,21 @@ class AnalysisController extends Controller
     public function analyzeAuto(AnalyzeAutoRequest $request): JsonResponse
     {
         try {
-            $result = $this->fintrackAutoAnalyzeService->run(
-                $request->resolvedUserId(),
-                $request->since(),
-                $request->includeSummary(),
-                $request->useSavedSince()
-            );
-
+            $resolvedUserId = $request->resolvedUserId();
             $resolvedEmail = $request->resolvedEmail();
             $resolvedName = null;
+            $resolvedKeycloakSub = null;
 
             $authenticatedUser = Auth::user();
 
             if ($authenticatedUser instanceof User) {
                 $resolvedName = trim((string) $authenticatedUser->name);
+
+                $keycloakSub = trim((string) $authenticatedUser->keycloak_sub);
+
+                if ($keycloakSub !== '') {
+                    $resolvedKeycloakSub = $keycloakSub;
+                }
             } elseif (is_string($resolvedEmail) && $resolvedEmail !== '') {
                 $resolvedUser = User::query()
                     ->whereRaw('LOWER(email) = ?', [$resolvedEmail])
@@ -59,8 +60,55 @@ class AnalysisController extends Controller
 
                 if ($resolvedUser instanceof User) {
                     $resolvedName = trim((string) $resolvedUser->name);
+
+                    $keycloakSub = trim((string) $resolvedUser->keycloak_sub);
+
+                    if ($keycloakSub !== '') {
+                        $resolvedKeycloakSub = $keycloakSub;
+                    }
                 }
             }
+
+            if (is_numeric($resolvedUserId) && ($resolvedEmail === null || $resolvedName === null || $resolvedKeycloakSub === null)) {
+                $resolvedUser = User::query()->find((int) $resolvedUserId);
+
+                if ($resolvedUser instanceof User) {
+                    if ($resolvedEmail === null) {
+                        $candidateEmail = strtolower(trim((string) $resolvedUser->email));
+
+                        if ($candidateEmail !== '') {
+                            $resolvedEmail = $candidateEmail;
+                        }
+                    }
+
+                    if ($resolvedName === null) {
+                        $candidateName = trim((string) $resolvedUser->name);
+
+                        if ($candidateName !== '') {
+                            $resolvedName = $candidateName;
+                        }
+                    }
+
+                    if ($resolvedKeycloakSub === null) {
+                        $candidateKeycloakSub = trim((string) $resolvedUser->keycloak_sub);
+
+                        if ($candidateKeycloakSub !== '') {
+                            $resolvedKeycloakSub = $candidateKeycloakSub;
+                        }
+                    }
+                }
+            }
+
+            $result = $this->fintrackAutoAnalyzeService->run(
+                (int) $resolvedUserId,
+                $request->since(),
+                $request->includeSummary(),
+                $request->useSavedSince(),
+                null,
+                null,
+                $resolvedKeycloakSub,
+                $resolvedEmail
+            );
 
             if (is_array($result['source'] ?? null) && is_string($resolvedEmail) && $resolvedEmail !== '') {
                 $result['source']['user_email'] = $resolvedEmail;
@@ -132,22 +180,33 @@ class AnalysisController extends Controller
             $authenticatedUser = Auth::user();
             $authenticatedUserId = $authenticatedUser instanceof User ? (int) $authenticatedUser->id : Auth::id();
 
+            $resolvedEmail = null;
+            $resolvedName = null;
+            $resolvedKeycloakSub = null;
+
+            if ($authenticatedUser instanceof User) {
+                $resolvedEmail = strtolower(trim((string) $authenticatedUser->email));
+                $resolvedName = trim((string) $authenticatedUser->name);
+
+                $keycloakSub = trim((string) $authenticatedUser->keycloak_sub);
+
+                if ($keycloakSub !== '') {
+                    $resolvedKeycloakSub = $keycloakSub;
+                }
+            }
+
             $result = $this->fintrackAutoAnalyzeService->run(
                 is_numeric($authenticatedUserId) ? (int) $authenticatedUserId : null,
                 $resolvedSince,
                 true,
                 $useSavedSince,
                 is_string($dateFrom) ? $dateFrom : null,
-                is_string($dateTo) ? $dateTo : null
+                is_string($dateTo) ? $dateTo : null,
+                $resolvedKeycloakSub,
+                $resolvedEmail
             );
 
-            $resolvedEmail = null;
-            $resolvedName = null;
-
-            if ($authenticatedUser instanceof User) {
-                $resolvedEmail = strtolower(trim((string) $authenticatedUser->email));
-                $resolvedName = trim((string) $authenticatedUser->name);
-            } else {
+            if (! ($authenticatedUser instanceof User)) {
                 $resolvedUserId = data_get($result, 'source.user_id');
 
                 if (is_numeric($resolvedUserId)) {
@@ -210,11 +269,42 @@ class AnalysisController extends Controller
         }
 
         if (
+            str_contains($normalizedMessage, 'invalid service api key')
+            || str_contains($normalizedMessage, 'status:401')
+        ) {
+            return 'Koneksi antar-service ditolak oleh FinTrack (API key tidak valid). Samakan FINTRACK_FEED_API_KEY di FinLyzer dengan SERVICE2_PULL_API_KEY atau INTER_SERVICE_API_KEY di FinTrack.';
+        }
+
+        if (
+            str_contains($normalizedMessage, 'status:404')
+            && (
+                str_contains($normalizedMessage, 'no query results for model [app\\models\\user]')
+                || str_contains($normalizedMessage, 'user tidak ditemukan di fintrack')
+            )
+        ) {
+            return 'Akun belum tersedia di FinTrack. Login ke FinTrack sekali agar akun tersinkron, lalu coba lagi.';
+        }
+
+        if (
+            str_contains($normalizedMessage, 'status:400')
+            && (
+                str_contains($normalizedMessage, 'invalid request parameters')
+                || str_contains($normalizedMessage, 'since parameter')
+            )
+        ) {
+            return 'Parameter sinkronisasi ke FinTrack tidak valid. Periksa format since/date yang dikirim.';
+        }
+
+        if (
             str_contains($normalizedMessage, 'konfigurasi fintrack feed belum lengkap')
             || str_contains($normalizedMessage, 'fintrack_feed_base_url')
             || str_contains($normalizedMessage, 'fintrack_feed_api_key')
         ) {
             return 'Konfigurasi koneksi FinTrack belum lengkap. Periksa FINTRACK_FEED_BASE_URL dan FINTRACK_FEED_API_KEY.';
+        }
+
+        if (str_contains($normalizedMessage, 'gagal mengambil transaksi dari fintrack feed')) {
+            return 'Gagal mengambil transaksi dari FinTrack feed.';
         }
 
         return 'Terjadi kendala saat mengambil data dari FinTrack. Silakan coba lagi beberapa saat lagi.';

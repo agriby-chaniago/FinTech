@@ -44,6 +44,8 @@ class Service2PullRequest extends FormRequest
                 },
             ],
             'include_summary' => ['nullable', 'boolean'],
+            'keycloak_sub' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'string', 'email:rfc', 'max:255'],
         ];
     }
 
@@ -70,5 +72,19 @@ class Service2PullRequest extends FormRequest
     public function includeSummary(): bool
     {
         return $this->boolean('include_summary', true);
+    }
+
+    public function identityKeycloakSub(): ?string
+    {
+        $value = trim((string) $this->input('keycloak_sub', ''));
+
+        return $value !== '' ? $value : null;
+    }
+
+    public function identityEmail(): ?string
+    {
+        $value = strtolower(trim((string) $this->input('email', '')));
+
+        return $value !== '' ? $value : null;
     }
 }

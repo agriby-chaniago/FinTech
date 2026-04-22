@@ -20,7 +20,9 @@ class FintrackAutoAnalyzeService
         bool $includeSummary = false,
         bool $useSavedSince = true,
         ?string $dateFrom = null,
-        ?string $dateTo = null
+        ?string $dateTo = null,
+        ?string $keycloakSub = null,
+        ?string $email = null
     ): array {
         $resolvedUserId = $userId ?? (int) config('services.fintrack_feed.default_user_id', 2);
 
@@ -37,7 +39,9 @@ class FintrackAutoAnalyzeService
             $resolvedSince,
             $includeSummary,
             $dateFrom,
-            $dateTo
+            $dateTo,
+            $keycloakSub,
+            $email
         );
 
         if ($useSavedSince && $dateFrom === null && $dateTo === null) {

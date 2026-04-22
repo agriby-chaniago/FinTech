@@ -11,12 +11,25 @@ use Illuminate\Support\Collection;
 
 class Service2PullController extends Controller
 {
-    public function transactionsFeed(Service2PullRequest $request, User $user): JsonResponse
+    public function transactionsFeed(Service2PullRequest $request, int $user): JsonResponse
     {
+        $resolvedUser = $this->resolveUser(
+            $user,
+            $request->identityKeycloakSub(),
+            $request->identityEmail()
+        );
+
+        if (! $resolvedUser instanceof User) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User tidak ditemukan di FinTrack.',
+            ], 404);
+        }
+
         $since = $request->since();
         $maxItems = max((int) config('services.service2_pull.max_items', 1000), 1);
 
-        $query = $user->transactions()
+        $query = $resolvedUser->transactions()
             ->select([
                 'id',
                 'user_id',
@@ -69,7 +82,8 @@ class Service2PullController extends Controller
             'message' => 'Transactions feed fetched successfully.',
             'data' => $data,
             'meta' => [
-                'user_id' => $user->id,
+                'user_id' => $resolvedUser->id,
+                'requested_user_id' => $user,
                 'requested_at' => now()->toIso8601String(),
                 'sync_mode' => $since === null ? 'snapshot' : 'delta',
                 'since' => $since?->toIso8601String(),
@@ -79,6 +93,37 @@ class Service2PullController extends Controller
                 'has_more' => $hasMore,
             ],
         ]);
+    }
+
+    private function resolveUser(int $requestedUserId, ?string $keycloakSub, ?string $email): ?User
+    {
+        $resolvedUser = User::query()->find($requestedUserId);
+
+        if ($resolvedUser instanceof User) {
+            return $resolvedUser;
+        }
+
+        if (is_string($keycloakSub) && $keycloakSub !== '') {
+            $resolvedUser = User::query()
+                ->where('keycloak_sub', $keycloakSub)
+                ->first();
+
+            if ($resolvedUser instanceof User) {
+                return $resolvedUser;
+            }
+        }
+
+        if (is_string($email) && $email !== '') {
+            $resolvedUser = User::query()
+                ->whereRaw('LOWER(email) = ?', [strtolower($email)])
+                ->first();
+
+            if ($resolvedUser instanceof User) {
+                return $resolvedUser;
+            }
+        }
+
+        return null;
     }
 
     private function transformTransaction(Transaction $transaction): array
