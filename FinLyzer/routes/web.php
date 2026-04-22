@@ -1,17 +1,25 @@
 <?php
 
 use App\Http\Controllers\AnalysisController;
+use App\Http\Controllers\Auth\OidcController;
 use App\Http\Controllers\Auth\SessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [SessionController::class, 'create'])->name('login');
-    Route::post('/login', [SessionController::class, 'store'])->name('login.attempt');
+    Route::get('/register', [OidcController::class, 'register'])->name('register');
+    Route::get('/auth/oidc/login', [OidcController::class, 'redirect'])->name('oidc.login');
+    Route::get('/auth/oidc/register', [OidcController::class, 'register'])->name('oidc.register');
+    Route::get('/auth/oidc/callback', [OidcController::class, 'callback'])->name('oidc.callback');
 });
 
-Route::post('/logout', [SessionController::class, 'destroy'])
+Route::post('/logout', [OidcController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
+
+Route::post('/auth/oidc/logout', [OidcController::class, 'logout'])
+    ->middleware('auth')
+    ->name('oidc.logout');
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/', function (): \Illuminate\View\View {

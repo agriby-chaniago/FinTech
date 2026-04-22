@@ -56,48 +56,10 @@
             line-height: 1.5;
         }
 
-        form {
+        .actions {
             margin-top: 0.8rem;
             display: grid;
             gap: 0.55rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.24rem;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #adc3e3;
-        }
-
-        input[type="email"],
-        input[type="password"] {
-            width: 100%;
-            border: 1px solid #365175;
-            border-radius: 10px;
-            background: #101f34;
-            color: var(--text);
-            font-size: 0.9rem;
-            padding: 0.6rem 0.64rem;
-        }
-
-        input:focus {
-            outline: 2px solid rgba(34, 211, 238, 0.24);
-            border-color: #37b5ce;
-        }
-
-        .remember {
-            display: flex;
-            align-items: center;
-            gap: 0.44rem;
-            color: var(--muted);
-            font-size: 0.82rem;
-        }
-
-        .actions {
-            display: grid;
-            gap: 0.42rem;
-            margin-top: 0.2rem;
         }
 
         .btn {
@@ -116,10 +78,10 @@
             background: linear-gradient(120deg, #22d3ee, #06b6d4);
         }
 
-        .btn-soft {
-            color: #d4e7ff;
-            border: 1px solid #3b5a80;
-            background: #1b2f49;
+        .btn-secondary {
+            color: #dbeafe;
+            background: rgba(29, 78, 216, 0.18);
+            border: 1px solid rgba(96, 165, 250, 0.6);
         }
 
         .error {
@@ -160,7 +122,7 @@
 <body>
 <main class="card">
     <h1>Login FinLyzer</h1>
-    <p>Masuk dengan email dan password dari database untuk memakai dashboard analisis.</p>
+    <p>Autentikasi hanya melalui Keycloak untuk memakai dashboard analisis.</p>
 
     @if (session('status'))
         <div class="status-ok">{{ session('status') }}</div>
@@ -176,31 +138,13 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('login.attempt') }}">
-        @csrf
-
-        <div>
-            <label for="email">Email</label>
-            <input id="email" name="email" type="email" value="{{ old('email') }}" required autocomplete="email" autofocus>
-        </div>
-
-        <div>
-            <label for="password">Password</label>
-            <input id="password" name="password" type="password" required autocomplete="current-password">
-        </div>
-
-        <label class="remember">
-            <input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }}>
-            Ingat saya
-        </label>
-
-        <div class="actions">
-            <button type="submit" class="btn btn-primary">Login</button>
-        </div>
-    </form>
+    <div class="actions">
+        <a href="{{ route('oidc.login') }}" class="btn btn-primary">Lanjutkan dengan Keycloak</a>
+        <a href="{{ route('oidc.register') }}" class="btn btn-secondary">Buat akun baru</a>
+    </div>
 
     <div class="foot">
-        Gunakan akun user yang sudah tersimpan pada tabel users di database FinLyzer.
+        Akun akan disinkronkan otomatis dari Keycloak saat login berhasil.
     </div>
 </main>
 </body>

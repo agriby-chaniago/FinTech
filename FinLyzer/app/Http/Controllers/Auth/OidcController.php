@@ -19,6 +19,16 @@ class OidcController extends Controller
 {
     public function redirect(Request $request): RedirectResponse
     {
+        return $this->buildAuthorizationRedirect($request, false);
+    }
+
+    public function register(Request $request): RedirectResponse
+    {
+        return $this->buildAuthorizationRedirect($request, true);
+    }
+
+    private function buildAuthorizationRedirect(Request $request, bool $isRegistration): RedirectResponse
+    {
         if (! (bool) config('keycloak.enabled', false)) {
             return redirect('/')->withErrors([
                 'oidc' => 'OIDC belum diaktifkan pada environment ini.',
@@ -29,7 +39,18 @@ class OidcController extends Controller
         $clientId = (string) config('keycloak.client_id', '');
         $redirectUri = (string) config('keycloak.redirect_uri', '');
 
-        if ($authorizationEndpoint === '' || $clientId === '' || $redirectUri === '') {
+        $targetEndpoint = $authorizationEndpoint;
+
+        if ($isRegistration) {
+            $baseUrl = rtrim((string) config('keycloak.base_url', ''), '/');
+            $realm = trim((string) config('keycloak.realm', ''));
+
+            if ($baseUrl !== '' && $realm !== '') {
+                $targetEndpoint = $baseUrl.'/realms/'.$realm.'/protocol/openid-connect/registrations';
+            }
+        }
+
+        if ($targetEndpoint === '' || $clientId === '' || $redirectUri === '') {
             return redirect('/')->withErrors([
                 'oidc' => 'Konfigurasi Keycloak belum lengkap.',
             ]);
@@ -57,7 +78,7 @@ class OidcController extends Controller
             'code_challenge_method' => 'S256',
         ]);
 
-        return redirect()->away($authorizationEndpoint.'?'.$query);
+        return redirect()->away($targetEndpoint.'?'.$query);
     }
 
     public function callback(Request $request): RedirectResponse
