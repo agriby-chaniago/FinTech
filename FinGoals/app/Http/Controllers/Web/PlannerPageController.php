@@ -127,6 +127,8 @@ class PlannerPageController extends Controller
             $summary = 'Belum ada ringkasan analisis otomatis.';
         }
 
+        $summary = $this->formatSummaryText($summary);
+
         return [
             'executed_at' => (string) data_get($analysisData, 'executed_at', ''),
             'total_income' => (int) round((float) data_get($analysisData, 'metrics.total_income', 0)),
@@ -138,5 +140,18 @@ class PlannerPageController extends Controller
             'financial_health' => (string) data_get($analysisData, 'metrics.financial_health', 'Perlu perhatian'),
             'summary' => $summary,
         ];
+    }
+
+    private function formatSummaryText(string $summary): string
+    {
+        $normalized = str_replace(["\r\n", "\r"], "\n", $summary);
+        $normalized = preg_replace('/\*\*(.*?)\*\*/u', '$1', $normalized) ?? $normalized;
+        $normalized = preg_replace('/`{1,3}([^`]+)`{1,3}/u', '$1', $normalized) ?? $normalized;
+        $normalized = preg_replace('/\s*(Saran:|Actionable:)/u', "\n\n$1", $normalized) ?? $normalized;
+        $normalized = preg_replace('/(^|\n)\s*[-*]\s+/u', '$1• ', $normalized) ?? $normalized;
+        $normalized = preg_replace('/[ \t]{2,}/u', ' ', $normalized) ?? $normalized;
+        $normalized = preg_replace('/\n{3,}/u', "\n\n", $normalized) ?? $normalized;
+
+        return trim($normalized);
     }
 }

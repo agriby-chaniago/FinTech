@@ -5,12 +5,11 @@
 @section('content')
     <section class="mx-auto max-w-2xl rounded-2xl border border-[#45475A]/60 bg-[#1E1E2E]/92 p-6 backdrop-blur-xl">
         <h2 class="font-display text-xl font-semibold text-white">Edit Goal</h2>
-        <p class="mt-1 text-sm text-[#BAC2DE]">Perbarui target finansial sesuai rencana terbaru Anda.</p>
+        <p class="mt-1 text-sm text-[#BAC2DE]">Perbarui target finansial Anda tanpa perlu memilih user lagi.</p>
 
         <form action="{{ route('web.goals.update', ['goalId' => $goal->id]) }}" method="POST" class="mt-5 space-y-4">
             @csrf
             @method('PUT')
-            <input type="hidden" name="user_id" value="{{ $selectedUserId }}">
 
             <div>
                 <label class="mb-1 block text-sm text-[#BAC2DE]" for="goal_name">Nama Goal</label>
@@ -32,7 +31,7 @@
                 <button type="submit" class="inline-flex items-center rounded-lg bg-[#89B4FA] px-4 py-2 text-sm font-semibold text-[#11111B] transition hover:bg-[#74C7EC]">
                     Update Goal
                 </button>
-                <a href="{{ route('web.goals.index', ['user_id' => $selectedUserId]) }}" class="inline-flex items-center rounded-lg border border-[#585B70]/75 px-4 py-2 text-sm text-[#CDD6F4] hover:border-[#89B4FA]/50 hover:bg-[#313244]/80">
+                <a href="{{ route('web.goals.index') }}" class="inline-flex items-center rounded-lg border border-[#585B70]/75 px-4 py-2 text-sm text-[#CDD6F4] hover:border-[#89B4FA]/50 hover:bg-[#313244]/80">
                     Batal
                 </a>
             </div>

@@ -3,79 +3,73 @@
 @section('title', 'Goals - Investment Planner Service')
 
 @section('content')
-    <section class="grid gap-6 lg:grid-cols-[1fr_1fr]">
-        <article class="rounded-2xl border border-[#45475A]/60 bg-[#1E1E2E]/92 p-5 backdrop-blur-xl">
-            <h2 class="font-display text-xl font-semibold text-white">Filter Goals per User</h2>
-            <p class="mt-1 text-sm text-[#BAC2DE]">Pilih user agar goals yang tampil tetap terisolasi per user.</p>
+    @php
+        $authenticatedUser = auth()->user();
+    @endphp
 
-            @if ($users->isEmpty())
-                <div class="mt-5 rounded-xl border border-[#FAB387]/40 bg-[#FAB387]/10 p-4 text-sm text-[#FAB387]">
-                    Belum ada user pada tabel users. Tambahkan user terlebih dahulu.
-                </div>
-            @else
-                <form method="GET" action="{{ route('web.goals.index') }}" class="mt-5 flex flex-wrap items-end gap-3">
-                    <div class="flex-1 min-w-56">
-                        <label class="mb-1 block text-sm text-[#BAC2DE]" for="user_id">User</label>
-                        <select id="user_id" name="user_id" class="w-full rounded-lg border border-[#585B70]/75 bg-[#313244]/85 px-3 py-2 text-sm text-[#CDD6F4] focus:border-[#89B4FA] focus:outline-none">
-                            <option value="">Pilih User</option>
-                            @foreach ($users as $user)
-                                <option value="{{ $user->id }}" @selected($selectedUserId === $user->id)>#{{ $user->id }} - {{ $user->name }} ({{ $user->email }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <button type="submit" class="rounded-lg border border-[#585B70]/75 px-4 py-2 text-sm text-[#CDD6F4] hover:border-[#89B4FA]/50 hover:bg-[#313244]/80">Terapkan</button>
-                </form>
+    <section class="rounded-2xl border border-[#45475A]/60 bg-[#1E1E2E]/92 p-5 shadow-xl">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h2 class="font-display text-2xl font-semibold text-white">Goals Anda</h2>
+                <p class="mt-1 text-sm text-[#BAC2DE]/90">
+                    Semua goals otomatis terikat ke akun login Anda. Tidak perlu pilih user secara manual.
+                </p>
+            </div>
+
+            @if ($authenticatedUser)
+                <span class="rounded-full border border-[#89B4FA]/45 bg-[#89B4FA]/15 px-3 py-1 text-xs font-medium text-[#B4BEFE]">
+                    Akun aktif: {{ $authenticatedUser->name }}
+                </span>
             @endif
-        </article>
+        </div>
 
-        <article class="rounded-2xl border border-[#45475A]/60 bg-[#1E1E2E]/92 p-5 backdrop-blur-xl">
-            <h2 class="font-display text-xl font-semibold text-white">Tambah Goal</h2>
-            <p class="mt-1 text-sm text-[#BAC2DE]">Buat target finansial baru untuk user terpilih.</p>
+        <form action="{{ route('web.goals.store') }}" method="POST" class="mt-5 space-y-4">
+            @csrf
 
-            @if (! $selectedUserId)
-                <div class="mt-5 rounded-xl border border-[#585B70]/60 bg-[#313244]/75 p-4 text-sm text-[#BAC2DE]">
-                    Pilih user terlebih dahulu di panel kiri.
+            <div>
+                <label class="mb-1 block text-sm text-[#BAC2DE]" for="goal_name">Nama Goal</label>
+                <input id="goal_name" name="goal_name" type="text" maxlength="255" value="{{ old('goal_name') }}" class="w-full rounded-lg border border-[#585B70]/75 bg-[#313244]/85 px-3 py-2 text-sm text-[#CDD6F4] focus:border-[#89B4FA] focus:outline-none" placeholder="Contoh: Dana darurat 6 bulan">
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="mb-1 block text-sm text-[#BAC2DE]" for="target_amount">Target Amount</label>
+                    <input id="target_amount" name="target_amount" type="number" min="1" value="{{ old('target_amount') }}" class="w-full rounded-lg border border-[#585B70]/75 bg-[#313244]/85 px-3 py-2 text-sm text-[#CDD6F4] focus:border-[#89B4FA] focus:outline-none" placeholder="5000000">
                 </div>
-            @else
-                <form action="{{ route('web.goals.store') }}" method="POST" class="mt-5 space-y-4">
-                    @csrf
-                    <input type="hidden" name="user_id" value="{{ $selectedUserId }}">
+                <div>
+                    <label class="mb-1 block text-sm text-[#BAC2DE]" for="deadline">Deadline</label>
+                    <input id="deadline" name="deadline" type="date" value="{{ old('deadline') }}" class="w-full rounded-lg border border-[#585B70]/75 bg-[#313244]/85 px-3 py-2 text-sm text-[#CDD6F4] focus:border-[#89B4FA] focus:outline-none">
+                </div>
+            </div>
 
-                    <div>
-                        <label class="mb-1 block text-sm text-[#BAC2DE]" for="goal_name">Nama Goal</label>
-                        <input id="goal_name" name="goal_name" type="text" maxlength="255" value="{{ old('goal_name') }}" class="w-full rounded-lg border border-[#585B70]/75 bg-[#313244]/85 px-3 py-2 text-sm text-[#CDD6F4] focus:border-[#89B4FA] focus:outline-none" placeholder="Contoh: Dana darurat 6 bulan">
-                    </div>
-
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <label class="mb-1 block text-sm text-[#BAC2DE]" for="target_amount">Target Amount</label>
-                            <input id="target_amount" name="target_amount" type="number" min="1" value="{{ old('target_amount') }}" class="w-full rounded-lg border border-[#585B70]/75 bg-[#313244]/85 px-3 py-2 text-sm text-[#CDD6F4] focus:border-[#89B4FA] focus:outline-none" placeholder="5000000">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-sm text-[#BAC2DE]" for="deadline">Deadline</label>
-                            <input id="deadline" name="deadline" type="date" value="{{ old('deadline') }}" class="w-full rounded-lg border border-[#585B70]/75 bg-[#313244]/85 px-3 py-2 text-sm text-[#CDD6F4] focus:border-[#89B4FA] focus:outline-none">
-                        </div>
-                    </div>
-
-                    <button type="submit" class="inline-flex items-center rounded-lg bg-[#89B4FA] px-4 py-2 text-sm font-semibold text-[#11111B] transition hover:bg-[#74C7EC]">
-                        Simpan Goal
-                    </button>
-                </form>
-            @endif
-        </article>
+            <div class="flex flex-wrap items-center gap-3">
+                <button type="submit" class="inline-flex items-center rounded-lg bg-[#89B4FA] px-4 py-2 text-sm font-semibold text-[#11111B] transition hover:bg-[#74C7EC]">
+                    Simpan Goal
+                </button>
+                <p class="text-xs text-[#A6ADC8]">Tip: gunakan nama goal yang spesifik agar tracking lebih jelas.</p>
+            </div>
+        </form>
     </section>
 
-    <section class="mt-6 rounded-2xl border border-[#45475A]/60 bg-[#1E1E2E]/92 p-5 backdrop-blur-xl">
-        <h2 class="font-display text-xl font-semibold text-white">Daftar Goals</h2>
+    <section class="mt-6 rounded-2xl border border-[#45475A]/60 bg-[#1E1E2E]/92 p-5 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="font-display text-xl font-semibold text-white">Daftar Goals Anda</h2>
+                <p class="text-sm text-[#BAC2DE]">Semua data di bawah ini milik akun yang sedang login.</p>
+            </div>
+            <span class="rounded-full border border-[#585B70]/60 px-3 py-1 text-xs text-[#A6ADC8]">
+                Total goals: {{ $goals->count() }}
+            </span>
+        </div>
 
-        @if (! $selectedUserId)
-            <p class="mt-3 text-sm text-[#BAC2DE]">Pilih user terlebih dahulu untuk menampilkan daftar goals.</p>
-        @elseif ($goals->isEmpty())
-            <p class="mt-3 text-sm text-[#BAC2DE]">Belum ada goal untuk user ini.</p>
+        @if ($goals->isEmpty())
+            <div class="mt-4 rounded-xl border border-[#585B70]/60 bg-[#313244]/75 p-4 text-sm text-[#BAC2DE]">
+                Belum ada goal. Mulai dengan menambahkan target finansial pertama Anda.
+            </div>
         @else
-            <div class="mt-4 overflow-x-auto">
+            <div class="mt-4 overflow-x-auto rounded-xl border border-[#585B70]/45">
                 <table class="min-w-full divide-y divide-white/10 text-sm">
-                    <thead class="text-left text-[#A6ADC8]">
+                    <thead class="bg-[#313244]/80 text-left text-[#A6ADC8]">
                         <tr>
                             <th class="px-3 py-2">Goal</th>
                             <th class="px-3 py-2">Target</th>
@@ -84,12 +78,12 @@
                             <th class="px-3 py-2">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-white/5 text-[#CDD6F4]">
+                    <tbody class="divide-y divide-white/5 bg-[#1E1E2E]/70 text-[#CDD6F4]">
                         @foreach ($goals as $goal)
                             @php
                                 $daysLeft = now()->startOfDay()->diffInDays($goal->deadline, false);
                             @endphp
-                            <tr>
+                            <tr class="transition hover:bg-[#313244]/65">
                                 <td class="px-3 py-2">{{ $goal->goal_name }}</td>
                                 <td class="px-3 py-2">Rp {{ number_format($goal->target_amount, 0, ',', '.') }}</td>
                                 <td class="px-3 py-2">{{ $goal->deadline->format('d M Y') }}</td>
@@ -104,11 +98,10 @@
                                 </td>
                                 <td class="px-3 py-2">
                                     <div class="flex flex-wrap gap-2">
-                                        <a href="{{ route('web.goals.edit', ['goalId' => $goal->id, 'user_id' => $selectedUserId]) }}" class="rounded-lg border border-[#89B4FA]/45 px-3 py-1 text-xs text-[#B4BEFE] hover:bg-[#89B4FA]/12">Edit</a>
+                                        <a href="{{ route('web.goals.edit', ['goalId' => $goal->id]) }}" class="rounded-lg border border-[#89B4FA]/45 px-3 py-1 text-xs text-[#B4BEFE] hover:bg-[#89B4FA]/12">Edit</a>
                                         <form method="POST" action="{{ route('web.goals.destroy', ['goalId' => $goal->id]) }}" onsubmit="return confirm('Hapus goal ini?')">
                                             @csrf
                                             @method('DELETE')
-                                            <input type="hidden" name="user_id" value="{{ $selectedUserId }}">
                                             <button type="submit" class="rounded-lg border border-[#F38BA8]/45 px-3 py-1 text-xs text-[#F5C2E7] hover:bg-[#F38BA8]/12">Hapus</button>
                                         </form>
                                     </div>
