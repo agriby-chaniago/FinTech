@@ -7,6 +7,56 @@
         $executedAtLabel = null;
         $hasPlanResult = is_array($planResult ?? null);
 
+        $buildFallbackRecommendation = static function (?string $riskLevel, int $savingPlan): string {
+            $normalizedRisk = strtolower(trim((string) $riskLevel));
+            $monthlyStart = max(100000, (int) round(max(0, $savingPlan) * 0.35));
+            $monthlyStartLabel = 'Rp '.number_format($monthlyStart, 0, ',', '.');
+
+            return match ($normalizedRisk) {
+                'high' => "Prioritas profil risiko tinggi:\n1. 70% ke Reksa Dana Pasar Uang.\n2. 30% ke Reksa Dana Pendapatan Tetap.\nMulai bertahap dari {$monthlyStartLabel} per bulan.",
+                'low' => "Prioritas profil risiko rendah:\n1. 40% Reksa Dana Pasar Uang.\n2. 30% Reksa Dana Pendapatan Tetap.\n3. 30% Saham indeks jangka panjang.\nMulai bertahap dari {$monthlyStartLabel} per bulan.",
+                default => "Prioritas profil risiko menengah:\n1. 50% Reksa Dana Pasar Uang.\n2. 35% Reksa Dana Pendapatan Tetap.\n3. 15% Saham indeks.\nMulai bertahap dari {$monthlyStartLabel} per bulan.",
+            };
+        };
+
+        $formatRecommendation = static function (?string $recommendation, ?string $riskLevel = null, ?int $savingPlan = null) use ($buildFallbackRecommendation): string {
+            $text = trim((string) $recommendation);
+
+            $text = preg_replace('/\*{1,3}(.*?)\*{1,3}/u', '$1', $text) ?? $text;
+            $text = preg_replace('/`{1,3}([^`]+)`{1,3}/u', '$1', $text) ?? $text;
+            $text = preg_replace('/[ \t]{2,}/u', ' ', $text) ?? $text;
+            $text = str_replace(["\r\n", "\r"], "\n", $text);
+
+            $tokens = preg_split('/\s+/u', trim($text), -1, PREG_SPLIT_NO_EMPTY);
+            $tokenCount = is_array($tokens) ? count($tokens) : 0;
+            preg_match_all('/\b\d+\b/u', $text, $numberMatches);
+            $numberCount = is_array($numberMatches[0] ?? null) ? count($numberMatches[0]) : 0;
+            $hasPunctuation = preg_match('/[\.,;:\n]/u', $text) === 1;
+
+            if ($text === '' || ($tokenCount >= 12 && $numberCount >= 4 && ! $hasPunctuation)) {
+                return $buildFallbackRecommendation($riskLevel, (int) ($savingPlan ?? 0));
+            }
+
+            $text = preg_replace_callback('/\b\d{5,}\b/u', static function (array $matches): string {
+                $value = (int) $matches[0];
+
+                return 'Rp '.number_format($value, 0, ',', '.');
+            }, $text) ?? $text;
+
+            $text = preg_replace('/\s*(Saran:|Actionable:)/u', "\n\n$1", $text) ?? $text;
+            $text = preg_replace('/\n{3,}/u', "\n\n", $text) ?? $text;
+
+            return trim($text);
+        };
+
+        $planRecommendationText = $hasPlanResult
+            ? $formatRecommendation(
+                (string) ($planResult['investment_recommendation'] ?? ''),
+                (string) ($planResult['risk_level'] ?? ''),
+                (int) ($planResult['saving_plan'] ?? 0)
+            )
+            : '';
+
         if (! empty($analysisSnapshot['executed_at'])) {
             try {
                 $executedAtLabel = \Illuminate\Support\Carbon::parse($analysisSnapshot['executed_at'])->format('d M Y H:i');
@@ -115,7 +165,7 @@
 
                     <div class="rounded-xl border border-[#585B70]/60 bg-[#313244]/88 p-4">
                         <p class="text-xs uppercase tracking-wide text-[#A6ADC8]">Investment Recommendation</p>
-                        <p class="mt-2 text-sm leading-relaxed text-[#CDD6F4]">{{ $planResult['investment_recommendation'] }}</p>
+                        <p class="mt-2 whitespace-pre-line text-sm leading-relaxed text-[#CDD6F4]">{!! nl2br(e($planRecommendationText)) !!}</p>
                     </div>
 
                     <div class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide {{ $riskStyle }}">
@@ -178,7 +228,14 @@
                                         {{ $plan->risk_level }}
                                     </span>
                                 </td>
-                                <td class="px-3 py-2">{{ $plan->investment_recommendation }}</td>
+                                @php
+                                    $historyRecommendation = $formatRecommendation(
+                                        (string) $plan->investment_recommendation,
+                                        (string) $plan->risk_level,
+                                        (int) $plan->saving_plan
+                                    );
+                                @endphp
+                                <td class="px-3 py-2">{{ \Illuminate\Support\Str::limit(str_replace(["\r", "\n"], ' ', $historyRecommendation), 100) }}</td>
                             </tr>
                         @endforeach
                     </tbody>

@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
+    Route::get('/login', static fn (): \Illuminate\Http\RedirectResponse => redirect()->route('oidc.redirect'))
+        ->name('login');
+
     Route::get('/auth/oidc/redirect', [OidcController::class, 'redirect'])
         ->name('oidc.redirect');
 
@@ -14,7 +17,7 @@ Route::middleware('guest')->group(function (): void {
         ->name('oidc.callback');
 });
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware('hybrid.web_auth')->group(function (): void {
     Route::post('/auth/oidc/logout', [OidcController::class, 'logout'])
         ->name('oidc.logout');
 });
