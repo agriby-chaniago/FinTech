@@ -84,19 +84,19 @@ class KeycloakService
         try {
             // Get JWKS to verify signature
             $jwks = $this->getJWKS();
-            
+
             if (!$jwks) {
                 // If JWKS fetch fails, decode without verification
                 $parts = explode('.', $token);
                 if (count($parts) !== 3) {
                     return null;
                 }
-                
+
                 $payload = json_decode(
                     base64_decode(strtr($parts[1], '-_', '+/')),
                     true
                 );
-                
+
                 return $payload;
             }
 
