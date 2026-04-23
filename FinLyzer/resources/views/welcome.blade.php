@@ -389,9 +389,6 @@
 			<h2>Quick Action</h2>
 			<p>Pilih rentang tanggal lalu jalankan analisis untuk akun yang sedang login.</p>
 
-			<label for="username">User Login</label>
-			<input id="username" type="text" value="{{ auth()->user()?->name ?? 'User' }}" readonly>
-
 			<label for="dateFrom">Tanggal Mulai</label>
 			<div class="date-wrap">
 				<input id="dateFrom" type="date" autocomplete="off">
@@ -473,13 +470,11 @@
 	const runEndpoint = "{{ route('dashboard.analyze.auto.run') }}";
 	const sendServiceCEndpoint = "{{ route('dashboard.analyze.send-service-c') }}";
 	const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-	const authenticatedDisplayName = @json((string) (auth()->user()?->name ?? 'User'));
 
 	const dateFromInput = document.getElementById('dateFrom');
 	const dateToInput = document.getElementById('dateTo');
 	const openDateFromPickerBtn = document.getElementById('openDateFromPickerBtn');
 	const openDateToPickerBtn = document.getElementById('openDateToPickerBtn');
-	const usernameInput = document.getElementById('username');
 
 	const runAnalyzeBtn = document.getElementById('runAnalyzeBtn');
 	const sendServiceCBtn = document.getElementById('sendServiceCBtn');
@@ -788,12 +783,6 @@
 		const executedAt = String(result.executed_at || source.executed_at || '').trim();
 		executedAtEl.textContent = formatDateTime(executedAt !== '' ? executedAt : new Date().toISOString());
 
-		if (source.user_name) {
-			usernameInput.value = String(source.user_name);
-		} else {
-			usernameInput.value = authenticatedDisplayName;
-		}
-
 		latestPayload = buildServiceCPayload(result);
 	}
 
@@ -912,7 +901,6 @@
 		insightText.textContent = 'Belum ada insight.';
 		renderBreakdown([]);
 		executedAtEl.textContent = '-';
-		usernameInput.value = authenticatedDisplayName;
 
 		setStatus('info', 'Dashboard direset ke rentang 30 hari terakhir.');
 	}
@@ -962,7 +950,6 @@
 
 	applyDefaultLast30Days();
 	updateRangeHint();
-	usernameInput.value = authenticatedDisplayName;
 </script>
 </body>
 </html>

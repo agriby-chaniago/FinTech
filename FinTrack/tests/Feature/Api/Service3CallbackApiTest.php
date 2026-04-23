@@ -126,6 +126,47 @@ it('rejects callback with invalid payload', function () {
         ->assertJsonPath('message', 'Invalid request parameters.');
 });
 
+it('resolves callback user by keycloak_sub when local user_id mismatches', function () {
+    /** @var User $wrongUser */
+    $wrongUser = User::factory()->createOne([
+        'email' => 'wrong-callback@example.com',
+        'keycloak_sub' => 'kc-wrong-callback',
+    ]);
+
+    /** @var User $correctUser */
+    $correctUser = User::factory()->createOne([
+        'email' => 'correct-callback@example.com',
+        'keycloak_sub' => 'kc-correct-callback',
+    ]);
+
+    $payload = [
+        'user_id' => $wrongUser->id,
+        'user_email' => $correctUser->email,
+        'keycloak_sub' => $correctUser->keycloak_sub,
+        'correlation_id' => 'corr-identity-hint-001',
+        'status' => 'success',
+        'summary_text' => 'Should map to correct user via keycloak_sub.',
+        'raw_payload' => [
+            'source' => 'service3',
+            'identity' => 'hint-priority',
+        ],
+    ];
+
+    postJson('/api/service3/plans/callback', $payload, [
+        'x-api-key' => 'service3-secret',
+    ])
+        ->assertStatus(201)
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.user_id', $correctUser->id);
+
+    $record = Service3PlanResult::query()
+        ->where('correlation_id', 'corr-identity-hint-001')
+        ->first();
+
+    expect($record)->not()->toBeNull();
+    expect($record?->user_id)->toBe($correctUser->id);
+});
+
 it('allows user to fetch own service3 plan results', function () {
     /** @var User $user */
     $user = User::factory()->createOne();

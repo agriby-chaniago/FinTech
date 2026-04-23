@@ -203,6 +203,58 @@ it('falls back to keycloak_sub when requested user_id is missing', function () {
         ->assertJsonPath('meta.total_items', 1);
 });
 
+it('prioritizes keycloak_sub over requested user_id when ids drift across services', function () {
+    $wrongUser = User::factory()->create([
+        'email' => 'track-wrong@example.com',
+        'keycloak_sub' => 'kc-track-wrong',
+    ]);
+
+    $correctUser = User::factory()->create([
+        'email' => 'track-correct@example.com',
+        'keycloak_sub' => 'kc-track-correct',
+    ]);
+
+    Transaction::create([
+        'user_id' => $wrongUser->id,
+        'amount' => 11111,
+        'description' => 'Wrong user transaction',
+        'category' => 'lainnya',
+        'type' => 'expense',
+        'transaction_date' => '2026-04-13',
+        'tanggal' => '2026-04-13',
+        'kategori' => 'pengeluaran',
+        'deskripsi' => 'Wrong user transaction',
+        'nominal' => 11111,
+    ]);
+
+    Transaction::create([
+        'user_id' => $correctUser->id,
+        'amount' => 22222,
+        'description' => 'Correct user transaction',
+        'category' => 'makan',
+        'type' => 'expense',
+        'transaction_date' => '2026-04-13',
+        'tanggal' => '2026-04-13',
+        'kategori' => 'pengeluaran',
+        'deskripsi' => 'Correct user transaction',
+        'nominal' => 22222,
+    ]);
+
+    $response = getJson(
+        "/api/service2/users/{$wrongUser->id}/transactions-feed?keycloak_sub=kc-track-correct",
+        ['x-api-key' => 'service2-secret']
+    );
+
+    $response
+        ->assertStatus(200)
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('meta.user_id', $correctUser->id)
+        ->assertJsonPath('meta.requested_user_id', $wrongUser->id)
+        ->assertJsonPath('meta.total_items', 1)
+        ->assertJsonPath('data.transactions.0.description', 'Correct user transaction')
+        ->assertJsonPath('data.transactions.0.amount', 22222);
+});
+
 it('returns not found when user does not exist', function () {
     $response = getJson(
         '/api/service2/users/999999/transactions-feed',

@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialPlan;
+use App\Models\Goal;
 use App\Models\User;
 use App\Services\FinancialPlanningService;
 use App\Services\ServiceBLatestAnalysisService;
+use App\Services\Service3CallbackService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +18,8 @@ class PlannerPageController extends Controller
 {
     public function __construct(
         private readonly FinancialPlanningService $financialPlanningService,
-        private readonly ServiceBLatestAnalysisService $serviceBLatestAnalysisService
+        private readonly ServiceBLatestAnalysisService $serviceBLatestAnalysisService,
+        private readonly Service3CallbackService $service3CallbackService
     ) {
     }
 
@@ -93,6 +96,10 @@ class PlannerPageController extends Controller
 
         $result = $this->financialPlanningService->createPlan($plannerPayload);
 
+        $this->service3CallbackService->sendPlanResult(
+            $this->buildService3CallbackPayload($plannerPayload, $result, $authenticatedUser)
+        );
+
         return redirect()
             ->route('web.planner.index')
             ->with('status', 'Rencana otomatis berhasil dibuat dari data terbaru Service B.')
@@ -166,5 +173,98 @@ class PlannerPageController extends Controller
         $normalized = preg_replace('/\n{3,}/u', "\n\n", $normalized) ?? $normalized;
 
         return trim($normalized);
+    }
+
+    /**
+     * @param array<string, mixed> $plannerPayload
+     * @param array<string, mixed> $result
+     * @param User $authenticatedUser
+     * @return array<string, mixed>
+     */
+    private function buildService3CallbackPayload(array $plannerPayload, array $result, User $authenticatedUser): array
+    {
+        $resolvedEmail = strtolower(trim((string) $authenticatedUser->email));
+        $resolvedKeycloakSub = trim((string) $authenticatedUser->keycloak_sub);
+        $goalTargets = $this->resolveGoalTargets((int) $authenticatedUser->id);
+
+        $summaryText = sprintf(
+            'Saving plan %d dengan rekomendasi %s (risk: %s).',
+            (int) $result['saving_plan'],
+            (string) $result['investment_recommendation'],
+            (string) $result['risk_level']
+        );
+
+        return [
+            'user_id' => (int) $plannerPayload['user_id'],
+            'user_email' => $resolvedEmail !== '' ? $resolvedEmail : null,
+            'keycloak_sub' => $resolvedKeycloakSub !== '' ? $resolvedKeycloakSub : null,
+            'correlation_id' => 'web-plan-'.(int) $result['financial_plan_id'],
+            'analysis_id' => null,
+            'status' => 'success',
+            'summary_text' => $summaryText,
+            'recommendations' => [
+                [
+                    'type' => 'investment_recommendation',
+                    'value' => (string) $result['investment_recommendation'],
+                    'risk_level' => (string) $result['risk_level'],
+                    'saving_plan' => (int) $result['saving_plan'],
+                ],
+            ],
+            'goals' => $goalTargets,
+            'raw_payload' => [
+                'source' => 'fingoals-web',
+                'financial_plan_id' => (int) $result['financial_plan_id'],
+                'request' => [
+                    'user_id' => (int) $plannerPayload['user_id'],
+                    'user_email' => $resolvedEmail !== '' ? $resolvedEmail : null,
+                    'keycloak_sub' => $resolvedKeycloakSub !== '' ? $resolvedKeycloakSub : null,
+                    'total_income' => (int) $plannerPayload['total_income'],
+                    'total_expense' => (int) $plannerPayload['total_expense'],
+                    'top_category' => (string) $plannerPayload['top_category'],
+                    'insight' => (string) $plannerPayload['insight'],
+                    'saving_percentage' => isset($plannerPayload['saving_percentage'])
+                        ? (float) $plannerPayload['saving_percentage']
+                        : null,
+                ],
+                'goals' => $goalTargets,
+                'result' => [
+                    'saving_plan' => (int) $result['saving_plan'],
+                    'saving_amount' => (int) $result['saving_amount'],
+                    'saving_percentage' => (float) $result['saving_percentage'],
+                    'investment_recommendation' => (string) $result['investment_recommendation'],
+                    'risk_level' => (string) $result['risk_level'],
+                ],
+            ],
+            'plan_period_start' => null,
+            'plan_period_end' => null,
+        ];
+    }
+
+    /**
+     * @return array<int, array{name: string, target: int, timeline_months: int}>
+     */
+    private function resolveGoalTargets(int $userId): array
+    {
+        return Goal::query()
+            ->where('user_id', $userId)
+            ->orderBy('deadline')
+            ->limit(5)
+            ->get()
+            ->map(function (Goal $goal): array {
+                $deadline = $goal->deadline;
+                $timelineMonths = 0;
+
+                if ($deadline !== null) {
+                    $timelineMonths = max(0, (int) ceil(now()->startOfDay()->diffInMonths($deadline->startOfDay(), false)));
+                }
+
+                return [
+                    'name' => (string) $goal->goal_name,
+                    'target' => (int) $goal->target_amount,
+                    'timeline_months' => $timelineMonths,
+                ];
+            })
+            ->values()
+            ->all();
     }
 }

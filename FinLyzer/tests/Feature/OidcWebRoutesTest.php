@@ -37,7 +37,7 @@ class OidcWebRoutesTest extends TestCase
     {
         $response = $this->post('/auth/oidc/logout');
 
-        $response->assertRedirect('/');
+        $response->assertRedirect('/login');
     }
 
     public function test_oidc_logout_route_available_for_authenticated_user(): void

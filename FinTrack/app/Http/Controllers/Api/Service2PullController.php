@@ -97,12 +97,6 @@ class Service2PullController extends Controller
 
     private function resolveUser(int $requestedUserId, ?string $keycloakSub, ?string $email): ?User
     {
-        $resolvedUser = User::query()->find($requestedUserId);
-
-        if ($resolvedUser instanceof User) {
-            return $resolvedUser;
-        }
-
         if (is_string($keycloakSub) && $keycloakSub !== '') {
             $resolvedUser = User::query()
                 ->where('keycloak_sub', $keycloakSub)
@@ -121,6 +115,12 @@ class Service2PullController extends Controller
             if ($resolvedUser instanceof User) {
                 return $resolvedUser;
             }
+        }
+
+        $resolvedUser = User::query()->find($requestedUserId);
+
+        if ($resolvedUser instanceof User) {
+            return $resolvedUser;
         }
 
         return null;

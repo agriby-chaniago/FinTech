@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Goal;
 use App\Models\User;
 use App\Services\FinancialPlanningService;
 use App\Services\Service3CallbackService;
@@ -132,6 +133,11 @@ class PlanController extends Controller
      */
     private function buildService3CallbackPayload(Request $request, array $validated, array $result): array
     {
+        $resolvedUser = User::query()->find((int) $validated['user_id']);
+        $resolvedEmail = strtolower(trim((string) ($validated['user_email'] ?? ($resolvedUser?->email ?? ''))));
+        $resolvedKeycloakSub = trim((string) ($validated['keycloak_sub'] ?? ($resolvedUser?->keycloak_sub ?? '')));
+        $goalTargets = $this->resolveGoalTargets((int) $validated['user_id']);
+
         $correlationId = trim((string) $request->input('correlation_id', ''));
 
         if ($correlationId === '') {
@@ -157,6 +163,8 @@ class PlanController extends Controller
 
         return [
             'user_id' => (int) $validated['user_id'],
+            'user_email' => $resolvedEmail !== '' ? $resolvedEmail : null,
+            'keycloak_sub' => $resolvedKeycloakSub !== '' ? $resolvedKeycloakSub : null,
             'correlation_id' => $correlationId,
             'analysis_id' => $analysisId,
             'status' => 'success',
@@ -169,12 +177,14 @@ class PlanController extends Controller
                     'saving_plan' => (int) $result['saving_plan'],
                 ],
             ],
-            'goals' => [],
+            'goals' => $goalTargets,
             'raw_payload' => [
                 'source' => 'fingoals',
                 'financial_plan_id' => (int) $result['financial_plan_id'],
                 'request' => [
                     'user_id' => (int) $validated['user_id'],
+                    'user_email' => $resolvedEmail !== '' ? $resolvedEmail : null,
+                    'keycloak_sub' => $resolvedKeycloakSub !== '' ? $resolvedKeycloakSub : null,
                     'total_income' => (int) $validated['total_income'],
                     'total_expense' => (int) $validated['total_expense'],
                     'top_category' => (string) $validated['top_category'],
@@ -183,6 +193,7 @@ class PlanController extends Controller
                         ? (float) $validated['saving_percentage']
                         : null,
                 ],
+                'goals' => $goalTargets,
                 'result' => [
                     'saving_plan' => (int) $result['saving_plan'],
                     'saving_amount' => (int) $result['saving_amount'],
@@ -194,5 +205,33 @@ class PlanController extends Controller
             'plan_period_start' => null,
             'plan_period_end' => null,
         ];
+    }
+
+    /**
+     * @return array<int, array{name: string, target: int, timeline_months: int}>
+     */
+    private function resolveGoalTargets(int $userId): array
+    {
+        return Goal::query()
+            ->where('user_id', $userId)
+            ->orderBy('deadline')
+            ->limit(5)
+            ->get()
+            ->map(function (Goal $goal): array {
+                $deadline = $goal->deadline;
+                $timelineMonths = 0;
+
+                if ($deadline !== null) {
+                    $timelineMonths = max(0, (int) ceil(now()->startOfDay()->diffInMonths($deadline->startOfDay(), false)));
+                }
+
+                return [
+                    'name' => (string) $goal->goal_name,
+                    'target' => (int) $goal->target_amount,
+                    'timeline_months' => $timelineMonths,
+                ];
+            })
+            ->values()
+            ->all();
     }
 }
